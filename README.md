@@ -112,3 +112,9 @@ LUMQENIX_FSRCNN_MODEL="$HOME/.local/share/lumqenix/models/FSRCNN_x2.pb" \
 **Limits:** FSRCNN currently accepts at most 262,144 input pixels (e.g. 512x512). A 565x500 portrait is 282,500 pixels and will be rejected: resize a *copy* to 512x453 or smaller first. Inference is CPU-only and the model is cached in-process. This implementation is an initial integration, not yet tested end-to-end on the user's laptop. FSRCNN may yield softer or less faithful results than classic enhancement on some portraits. Compare images at matching dimensions and visually inspect identity and texture.
 
 Only one OpenCV wheel distribution should be installed per environment; avoid installing `opencv-python`, `opencv-python-headless`, and `opencv-contrib-python-headless` together.
+
+## Portrait AI v2 (experimental)
+
+The Studio engine selector now includes **Portrait AI v2 (experimental)**. It uses the same pretrained FSRCNN 2x network, preceded by a gentle bilateral denoise and followed by mild luminance-only unsharp masking. This is **not** a separate trained face-restoration model; it may improve or worsen details depending on the source. Original FSRCNN remains selectable for a controlled comparison.
+
+Both modes use `POST /api/enhance/fsrcnn` with multipart `portrait=false` or `portrait=true`. Portrait mode returns `fsrcnn-portrait-2x.png`. Input is still limited to 262,144 pixels. Compare original FSRCNN and Portrait AI v2 on the **same 512x453 input**, visually inspect facial identity and artifacts, and use `backend/scripts/compare_images.py` for supplementary metrics. This change has not yet been verified end-to-end on the target laptop.
