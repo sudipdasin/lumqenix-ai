@@ -118,3 +118,9 @@ Only one OpenCV wheel distribution should be installed per environment; avoid in
 The Studio engine selector now includes **Portrait AI v2 (experimental)**. It uses the same pretrained FSRCNN 2x network, preceded by a gentle bilateral denoise and followed by mild luminance-only unsharp masking. This is **not** a separate trained face-restoration model; it may improve or worsen details depending on the source. Original FSRCNN remains selectable for a controlled comparison.
 
 Both modes use `POST /api/enhance/fsrcnn` with multipart `portrait=false` or `portrait=true`. Portrait mode returns `fsrcnn-portrait-2x.png`. Input is still limited to 262,144 pixels. Compare original FSRCNN and Portrait AI v2 on the **same 512x453 input**, visually inspect facial identity and artifacts, and use `backend/scripts/compare_images.py` for supplementary metrics. This change has not yet been verified end-to-end on the target laptop.
+
+## Portrait AI v3 — adjustable strength (experimental)
+
+Select **Portrait AI v3 (adjustable)** in Studio. The strength slider defaults to 35%, and ranges from 0 to 100%. Strength 0 bypasses portrait filters and uses baseline pretrained FSRCNN 2x. Larger values gently increase bilateral denoising before inference and luminance-only sharpening after inference. **This is not a newly trained restoration model**. Existing FSRCNN and Portrait v2 remain available. The v2 frontend routing bug (previously invoking baseline FSRCNN) has also been fixed.
+
+API: `POST /api/enhance/fsrcnn` with multipart fields `portrait=true`, `portrait_version=3`, `strength=35` and `file`. Output filename `fsrcnn-portrait-v3-2x.png`. Invalid strength and version return HTTP 400. The existing 262,144-pixel input limit applies. The code has not been tested on the user's laptop yet; compare outputs at the same size and assess skin texture, facial fidelity, and halos before changing defaults.
