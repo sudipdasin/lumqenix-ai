@@ -169,6 +169,8 @@ async def enhance_video(file: UploadFile = File(...), preset: str = Form("auto")
     if preset not in PRESETS or scale not in (1,2,4): raise HTTPException(400, "Invalid preset or scale")
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"): raise HTTPException(503, "FFmpeg and ffprobe required")
     data = await read_limited(file)
+    if not data:
+        raise HTTPException(400, "Empty video upload")
     with tempfile.TemporaryDirectory() as tmp:
         src, dst = Path(tmp)/"source", Path(tmp)/"enhanced.mp4"
         src.write_bytes(data)
@@ -193,4 +195,6 @@ async def enhance_video(file: UploadFile = File(...), preset: str = Form("auto")
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired): raise HTTPException(422,"Video processing failed or timed out")
         finally:
             PROCESSING_LOCK.release()
+        if not dst.is_file() or dst.stat().st_size == 0:
+            raise HTTPException(422, "Video processing produced no output")
         return Response(content=dst.read_bytes(),media_type="video/mp4",headers={"Content-Disposition":"attachment; filename=enhanced.mp4"})
