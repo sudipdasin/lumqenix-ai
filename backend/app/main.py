@@ -100,7 +100,7 @@ async def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
 
 
 @app.post("/api/enhance/fsrcnn")
-async def enhance_fsrcnn(file: UploadFile = File(...)):
+async def enhance_fsrcnn(file: UploadFile = File(...), portrait: bool = Form(False)):
     """Pretrained FSRCNN 2x on CPU, restricted to small images in Lite mode."""
     if not fsrcnn_available():
         raise HTTPException(503, "FSRCNN unavailable: configure model and OpenCV contrib")
@@ -109,11 +109,11 @@ async def enhance_fsrcnn(file: UploadFile = File(...)):
     try:
         data = await read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
-            result = fsrcnn_upscale(image)
+            result = fsrcnn_upscale(image, portrait=portrait)
         output = io.BytesIO()
         result.save(output, format="PNG")
         return Response(content=output.getvalue(), media_type="image/png",
-                        headers={"Content-Disposition":"attachment; filename=fsrcnn-2x.png"})
+                        headers={"Content-Disposition":"attachment; filename=fsrcnn-portrait-2x.png" if portrait else "attachment; filename=fsrcnn-2x.png"})
     except HTTPException:
         raise
     except (UnidentifiedImageError, OSError, ValueError) as exc:
