@@ -84,3 +84,31 @@ LUMQENIX_ONNX_MODEL=/absolute/path/model.onnx LUMQENIX_ONNX_SCALE=2 \
 The benchmark always requests CPU and writes `/tmp/lumqenix-ai-benchmark.png` by default. Model must accept variable NCHW RGB float32 [0,1] patches and produce the configured spatial upscale factor. Models using fixed input shapes, mean/std normalization, alternate channel orders or different output ranges are **not** supported by this adapter. Benchmarks have not yet been run on the target laptop.
 
 A potential alternative for low-RAM experimentation is OpenCV's FSRCNN x2 model, but it uses a TensorFlow `.pb` format and OpenCV's contrib `dnn_superres` interface; it cannot be used directly with the ONNX endpoint. See the official OpenCV dnn_superres documentation for that separate route.
+
+## Milestone 4: optional FSRCNN 2x (real neural CPU super-resolution)
+
+This experimental engine uses OpenCV contrib's `dnn_superres` and a separately supplied **pretrained** FSRCNN x2 TensorFlow `.pb` model. It is distinct from the ONNX route and classic Lanczos enhancement. The backend endpoint is `POST /api/enhance/fsrcnn`, and the frontend offers `FSRCNN neural 2× (CPU)`.
+
+**Recommended isolated Linux Mint setup** (do not replace OpenCV in a shared PyTorch/Florence/LaMa environment):
+
+```bash
+python3 -m venv ~/.venvs/lumqenix-fsrcnn
+~/.venvs/lumqenix-fsrcnn/bin/python -m pip install --upgrade pip
+~/.venvs/lumqenix-fsrcnn/bin/python -m pip install "fastapi>=0.115,<1" "uvicorn>=0.30,<1" "python-multipart>=0.0.9" "pillow>=10,<14" "numpy>=1.26,<3" "opencv-contrib-python-headless>=4.9,<5"
+~/.venvs/lumqenix-fsrcnn/bin/python -c "import cv2; print(cv2.__version__, hasattr(cv2,'dnn_superres'))"
+```
+
+Download a compatible pretrained model from its upstream project after reviewing its licensing and trustworthiness:
+[Saafke FSRCNN_x2.pb](https://github.com/Saafke/FSRCNN_Tensorflow/blob/master/models/FSRCNN_x2.pb). Do not commit weights into the application repository.
+
+```bash
+mkdir -p "$HOME/.local/share/lumqenix/models"
+curl -fL "https://raw.githubusercontent.com/Saafke/FSRCNN_Tensorflow/master/models/FSRCNN_x2.pb" -o "$HOME/.local/share/lumqenix/models/FSRCNN_x2.pb"
+cd "/media/backup/IMPORTANT/PROJECTS/Lumqenix_AI/lumqenix-ai/backend"
+LUMQENIX_FSRCNN_MODEL="$HOME/.local/share/lumqenix/models/FSRCNN_x2.pb" \
+  "$HOME/.venvs/lumqenix-fsrcnn/bin/python" -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+**Limits:** FSRCNN currently accepts at most 262,144 input pixels (e.g. 512x512). A 565x500 portrait is 282,500 pixels and will be rejected: resize a *copy* to 512x453 or smaller first. Inference is CPU-only and the model is cached in-process. This implementation is an initial integration, not yet tested end-to-end on the user's laptop. FSRCNN may yield softer or less faithful results than classic enhancement on some portraits. Compare images at matching dimensions and visually inspect identity and texture.
+
+Only one OpenCV wheel distribution should be installed per environment; avoid installing `opencv-python`, `opencv-python-headless`, and `opencv-contrib-python-headless` together.
