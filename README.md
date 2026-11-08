@@ -57,3 +57,13 @@ Use `GET /api/status` to inspect available ONNX providers. Upload an image to `P
 **Current constraints:** Only images use ONNX; video remains FFmpeg-based. Model compatibility is not automatically established, and some models require fixed tile dimensions, special normalization, or different output layouts. Overlap mitigates tile seams but does not guarantee seam-free results. This is not yet a production-ready or fully tested neural pipeline.
 
 Run unit tests: `cd backend && python -m pytest tests -q`.
+
+## Milestone 3: Lite mode and before/after interface
+
+The default Lite configuration targets older dual-core machines with approximately 4 GB RAM. The backend caps image/video output at **12 million pixels**, rejects simultaneous processing requests with HTTP 429, and limits FFmpeg threads to two. This is a conservative prototype cap, not a full system-memory monitor. Existing large 2x tests may now receive HTTP 413: reduce input dimensions or select 1x.
+
+The browser interface now offers a gentle **Portrait Restore** classic preset, original/enhanced image comparison, input/output dimensions, and an **AI super-resolution** option. The AI option is available only when the server has been configured with a compatible ONNX model; no model weights are bundled. AI mode defaults to CPU, tile 64, overlap 8. This version does **not** integrate or distribute Real-ESRGAN weights, nor does it guarantee compatibility with any particular ONNX export.
+
+Update a local checkout with `git pull`, stop and restart Uvicorn, and hard-refresh the browser (Ctrl+Shift+R). On a shared Windows/Linux NTFS partition, use a Python environment located on the Linux filesystem.
+
+**Testing status:** Files were committed through GitHub. Full end-to-end runtime and neural-model inference testing on the user's laptop remain outstanding.
