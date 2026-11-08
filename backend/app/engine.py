@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
-PRESETS = {"auto", "natural", "vivid", "restore", "cinematic"}
+PRESETS = {"auto", "natural", "vivid", "restore", "cinematic", "portrait"}
 
 def inspect(image: Image.Image) -> dict:
     rgb = np.asarray(image.convert("RGB"))
@@ -25,6 +25,11 @@ def enhance(image: Image.Image, preset: str = "auto", scale: int = 2):
         if stats["low_light"]: image = ImageEnhance.Brightness(image).enhance(1.18)
         image = ImageEnhance.Color(image).enhance(1.08)
         image = ImageEnhance.Sharpness(image).enhance(1.20)
+    elif preset == "portrait":
+        # Gentle portrait cleanup; avoid strong global sharpening and skin oversaturation.
+        image = image.filter(ImageFilter.GaussianBlur(radius=0.25))
+        image = ImageEnhance.Contrast(image).enhance(1.035)
+        image = ImageEnhance.Color(image).enhance(1.02)
     elif preset == "natural": image = ImageEnhance.Sharpness(image).enhance(1.12)
     elif preset == "vivid":
         image = ImageEnhance.Color(image).enhance(1.35)
