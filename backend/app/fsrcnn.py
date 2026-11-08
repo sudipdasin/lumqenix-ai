@@ -35,7 +35,9 @@ def _model(path):
     sr.setModel("fsrcnn", 2)
     return sr
 
-def upscale(image, portrait=False):
+def upscale(image, portrait=False, strength=35):
+    if not isinstance(strength, int) or not 0 <= strength <= 100:
+        raise ValueError('Portrait strength must be between 0 and 100')
     path = model_path()
     if path is None:
         raise RuntimeError("FSRCNN model not configured: set LUMQENIX_FSRCNN_MODEL")
@@ -43,16 +45,20 @@ def upscale(image, portrait=False):
     if image.width * image.height > MAX_INPUT_PIXELS:
         raise ValueError("FSRCNN Lite input limit: 262144 pixels (512 x 512 equivalent)")
     bgr = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR)
+    if portrait == 'v3' and strength == 0:
+        portrait = False
     if portrait:
         # Gentle edge-preserving cleanup BEFORE neural inference.
-        bgr = cv2.bilateralFilter(bgr, d=5, sigmaColor=12, sigmaSpace=3)
+        sigma = 12 if portrait is True else 4 + strength * 0.08
+        bgr = cv2.bilateralFilter(bgr, d=5, sigmaColor=sigma, sigmaSpace=3)
     result = _model(str(path)).upsample(bgr)
     if portrait:
         # Small luminance-only unsharp mask; preserve chroma and avoid harsh halos.
         lab = cv2.cvtColor(result, cv2.COLOR_BGR2LAB)
         l, a, b = cv2.split(lab)
         blurred = cv2.GaussianBlur(l, (0, 0), 0.65)
-        boosted = cv2.addWeighted(l, 1.12, blurred, -0.12, 0)
+        amount = 0.12 if portrait is True else 0.02 + strength * 0.0006
+        boosted = cv2.addWeighted(l, 1.0 + amount, blurred, -amount, 0)
         result = cv2.cvtColor(cv2.merge((boosted, a, b)), cv2.COLOR_LAB2BGR)
     if result.shape[:2] != (image.height * 2, image.width * 2):
         raise RuntimeError("FSRCNN model returned unexpected dimensions")
