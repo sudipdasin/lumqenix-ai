@@ -2,6 +2,12 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.2.2 — Development build
+- Return HTTP 413 before invoking FSRCNN or ESPCN for images above the neural Lite input cap.
+- Validate neural input before taking the CPU processing lock.
+- Add regression tests for oversized inputs, invalid image data, and invalid FSRCNN configuration.
+- **Verification:** CI and end-to-end pretrained ESPCN inference remain unconfirmed.
+
 ## 0.2.1 — Development build
 - Prevent invalid FSRCNN model paths from crashing `/api/status`.
 - Add deterministic smoke tests for status, classic upscaling, neural endpoint routing, invalid inputs, and mocked ESPCN output.
