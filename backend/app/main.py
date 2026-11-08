@@ -4,6 +4,8 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+import os
+import threading
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,12 +18,14 @@ app = FastAPI(title="Lumqenix API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"], allow_methods=["*"], allow_headers=["*"])
 MAX_UPLOAD = 50 * 1024 * 1024
 MAX_PIXELS = 32_000_000
+LITE_MAX_PIXELS = 12_000_000
+PROCESSING_LOCK = threading.Lock()
 Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
 @app.get("/api/status")
 def status():
     return {"status":"ok", "hardware":detect_hardware(), "ai_model_configured":bool(__import__("os").getenv("LUMQENIX_ONNX_MODEL")),
-            "ffmpeg_available":bool(shutil.which("ffmpeg")), "presets":sorted(PRESETS)}
+            "ffmpeg_available":bool(shutil.which("ffmpeg")), "presets":sorted(PRESETS), "lite_mode": True, "lite_max_output_pixels":LITE_MAX_PIXELS}
 
 @app.get("/api/brand")
 def brand():
@@ -48,8 +52,12 @@ async def enhance_image(file: UploadFile = File(...), preset: str = Form("auto")
     try:
         data = await read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
-            if image.width * image.height * scale * scale > MAX_PIXELS: raise HTTPException(413, "Output too large")
-            result, _ = enhance(image, preset, scale)
+            if image.width * image.height * scale * scale > LITE_MAX_PIXELS: raise HTTPException(413, "Lite mode output limit: 12 million pixels. Use a smaller image or lower scale.")
+            if not PROCESSING_LOCK.acquire(blocking=False): raise HTTPException(429, "Another job is processing; try again shortly")
+            try:
+                result, _ = enhance(image, preset, scale)
+            finally:
+                PROCESSING_LOCK.release()
         output = io.BytesIO()
         result.save(output, format="PNG", optimize=True)
         return Response(content=output.getvalue(), media_type="image/png", headers={"Content-Disposition":"attachment; filename=enhanced.png"})
@@ -68,9 +76,13 @@ async def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
         scale = configured_scale()
         data = await read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
-            if image.width * image.height * scale * scale > MAX_PIXELS:
-                raise HTTPException(413, "Output too large")
-            result, used_device = onnx_upscale(image, device, tile, overlap)
+            if image.width * image.height * scale * scale > LITE_MAX_PIXELS:
+                raise HTTPException(413, "Lite mode output limit: 12 million pixels")
+            if not PROCESSING_LOCK.acquire(blocking=False): raise HTTPException(429, "Another job is processing; try again shortly")
+            try:
+                result, used_device = onnx_upscale(image, device, tile, overlap)
+            finally:
+                PROCESSING_LOCK.release()
         output = io.BytesIO()
         result.save(output, format="PNG")
         return Response(content=output.getvalue(), media_type="image/png",
@@ -94,11 +106,14 @@ async def enhance_video(file: UploadFile = File(...), preset: str = Form("auto")
         probe = subprocess.run(["ffprobe","-v","error","-select_streams","v:0","-show_entries","stream=width,height","-of","csv=p=0",str(src)],capture_output=True,text=True,timeout=20)
         try:
             width,height = map(int,probe.stdout.strip().split(","))
-            if width * height * scale * scale > MAX_PIXELS: raise ValueError()
+            if width * height * scale * scale > LITE_MAX_PIXELS: raise ValueError()
         except ValueError: raise HTTPException(400,"Invalid video or oversized output")
         filters = {"auto":"eq=contrast=1.05:saturation=1.08,unsharp=3:3:0.4", "natural":"unsharp=3:3:0.3", "vivid":"eq=contrast=1.1:saturation=1.3", "restore":"hqdn3d=2:1.5:3:2,unsharp=3:3:0.3", "cinematic":"eq=contrast=1.16:saturation=1.1"}
         vf = filters[preset] + f",scale=iw*{scale}:ih*{scale}:flags=lanczos,format=yuv420p"
+        if not PROCESSING_LOCK.acquire(blocking=False): raise HTTPException(429, "Another job is processing; try again shortly")
         try:
-            subprocess.run(["ffmpeg","-nostdin","-v","error","-y","-i",str(src),"-vf",vf,"-c:v","libx264","-preset","veryfast","-crf","19","-c:a","aac","-movflags","+faststart",str(dst)],check=True,timeout=180,capture_output=True)
+            subprocess.run(["ffmpeg","-threads","2","-filter_threads","2","-nostdin","-v","error","-y","-i",str(src),"-vf",vf,"-c:v","libx264","-preset","veryfast","-crf","19","-c:a","aac","-movflags","+faststart",str(dst)],check=True,timeout=180,capture_output=True)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired): raise HTTPException(422,"Video processing failed or timed out")
+        finally:
+            PROCESSING_LOCK.release()
         return Response(content=dst.read_bytes(),media_type="video/mp4",headers={"Content-Disposition":"attachment; filename=enhanced.mp4"})
