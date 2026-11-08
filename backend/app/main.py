@@ -9,6 +9,8 @@ from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image, UnidentifiedImageError
 from .engine import enhance, inspect, PRESETS
+from .hardware import detect_hardware
+from .onnx_upscale import upscale as onnx_upscale, model_path, configured_scale
 
 app = FastAPI(title="Lumqenix API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"], allow_methods=["*"], allow_headers=["*"])
@@ -18,7 +20,7 @@ Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
 @app.get("/api/status")
 def status():
-    return {"status":"ok", "hardware":"cpu", "ai_model_loaded":False,
+    return {"status":"ok", "hardware":detect_hardware(), "ai_model_configured":bool(__import__("os").getenv("LUMQENIX_ONNX_MODEL")),
             "ffmpeg_available":bool(shutil.which("ffmpeg")), "presets":sorted(PRESETS)}
 
 @app.get("/api/brand")
@@ -52,6 +54,34 @@ async def enhance_image(file: UploadFile = File(...), preset: str = Form("auto")
         result.save(output, format="PNG", optimize=True)
         return Response(content=output.getvalue(), media_type="image/png", headers={"Content-Disposition":"attachment; filename=enhanced.png"})
     except (UnidentifiedImageError, OSError, ValueError): raise HTTPException(400, "Unsupported or invalid image")
+
+@app.post("/api/enhance/onnx")
+async def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
+                       tile: int = Form(128), overlap: int = Form(16)):
+    """Optional AI super-resolution; model must be configured by server operator."""
+    if device not in ("auto", "cpu", "gpu") or not 32 <= tile <= 512 or not 0 <= overlap <= 64 or overlap*2 >= tile:
+        raise HTTPException(400, "Invalid device, tile or overlap")
+    try:
+        path = model_path()
+        if path is None:
+            raise HTTPException(503, "ONNX model not configured")
+        scale = configured_scale()
+        data = await read_limited(file)
+        with Image.open(io.BytesIO(data)) as image:
+            if image.width * image.height * scale * scale > MAX_PIXELS:
+                raise HTTPException(413, "Output too large")
+            result, used_device = onnx_upscale(image, device, tile, overlap)
+        output = io.BytesIO()
+        result.save(output, format="PNG")
+        return Response(content=output.getvalue(), media_type="image/png",
+                        headers={"Content-Disposition":"attachment; filename=ai-upscaled.png",
+                                 "X-Lumqenix-Device":used_device})
+    except HTTPException:
+        raise
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise HTTPException(400, str(exc))
+    except (RuntimeError, ImportError) as exc:
+        raise HTTPException(503, str(exc))
 
 @app.post("/api/enhance/video")
 async def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scale: int = Form(2)):
