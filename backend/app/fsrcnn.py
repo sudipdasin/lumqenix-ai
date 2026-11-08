@@ -23,7 +23,10 @@ def model_path():
     return path
 
 def available():
-    return bool(model_path()) and hasattr(cv2, "dnn_superres")
+    try:
+        return bool(model_path()) and hasattr(cv2, "dnn_superres")
+    except ValueError:
+        return False
 
 @lru_cache(maxsize=1)
 def _model(path):
