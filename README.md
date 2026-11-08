@@ -124,3 +124,11 @@ Both modes use `POST /api/enhance/fsrcnn` with multipart `portrait=false` or `po
 Select **Portrait AI v3 (adjustable)** in Studio. The strength slider defaults to 35%, and ranges from 0 to 100%. Strength 0 bypasses portrait filters and uses baseline pretrained FSRCNN 2x. Larger values gently increase bilateral denoising before inference and luminance-only sharpening after inference. **This is not a newly trained restoration model**. Existing FSRCNN and Portrait v2 remain available. The v2 frontend routing bug (previously invoking baseline FSRCNN) has also been fixed.
 
 API: `POST /api/enhance/fsrcnn` with multipart fields `portrait=true`, `portrait_version=3`, `strength=35` and `file`. Output filename `fsrcnn-portrait-v3-2x.png`. Invalid strength and version return HTTP 400. The existing 262,144-pixel input limit applies. The code has not been tested on the user's laptop yet; compare outputs at the same size and assess skin texture, facial fidelity, and halos before changing defaults.
+
+## Milestone v4: ESPCN 2x model comparison (experimental)
+
+Studio now offers **ESPCN neural 2× (experimental)**, independent of FSRCNN and Portrait v3. It uses OpenCV contrib's `dnn_superres` with a separately obtained compatible **pretrained ESPCN x2 TensorFlow .pb** model. No weights are bundled or downloaded automatically. Obtain weights from a trusted upstream source, check their license, and verify their provenance; do not use FSRCNN weights with ESPCN.
+
+Set `LUMQENIX_ESPCN_MODEL=/absolute/path/to/ESPCN_x2.pb` alongside `LUMQENIX_FSRCNN_MODEL` when launching the backend. The existing isolated OpenCV contrib environment works for both models. Check `/api/status` for `espcn_available: true`, then select ESPCN in Studio. API: `POST /api/enhance/espcn` with multipart `file`; output is `espcn-2x.png`. Maximum input size remains 262,144 pixels and CPU threads are limited to two. No claim of improved detail or speed is made until real-world testing.
+
+Compare the same 512x453 portrait input across ESPCN, FSRCNN, and Portrait v3. Inspect hair, skin, facial features, color, processing time, and noise at equal output sizes. The new ESPCN route has not yet been tested on the user's laptop.
