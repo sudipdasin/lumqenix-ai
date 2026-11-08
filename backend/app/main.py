@@ -109,10 +109,16 @@ async def enhance_fsrcnn(file: UploadFile = File(...), portrait: bool = Form(Fal
         raise HTTPException(400, "Invalid portrait version or strength")
     if not fsrcnn_available():
         raise HTTPException(503, "FSRCNN unavailable: configure model and OpenCV contrib")
+    data = await read_limited(file)
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            if image.width * image.height > 512 * 512:
+                raise HTTPException(413, "Neural Lite input limit: 262144 pixels")
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise HTTPException(400, "Unsupported or invalid image") from exc
     if not PROCESSING_LOCK.acquire(blocking=False):
         raise HTTPException(429, "Another job is processing; try again shortly")
     try:
-        data = await read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
             result = fsrcnn_upscale(image, portrait=("v3" if portrait and portrait_version == 3 else portrait), strength=strength)
         output = io.BytesIO()
@@ -133,10 +139,16 @@ async def enhance_espcn(file: UploadFile = File(...)):
     """Experimental pretrained ESPCN x2 CPU mode."""
     if not espcn_available():
         raise HTTPException(503, "ESPCN unavailable: configure LUMQENIX_ESPCN_MODEL")
+    data = await read_limited(file)
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            if image.width * image.height > 512 * 512:
+                raise HTTPException(413, "Neural Lite input limit: 262144 pixels")
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise HTTPException(400, "Unsupported or invalid image") from exc
     if not PROCESSING_LOCK.acquire(blocking=False):
         raise HTTPException(429, "Another job is processing; try again shortly")
     try:
-        data = await read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
             result = espcn_upscale(image)
         output = io.BytesIO()
