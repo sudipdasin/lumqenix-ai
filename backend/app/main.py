@@ -108,7 +108,7 @@ async def enhance_video(file: UploadFile = File(...), preset: str = Form("auto")
             width,height = map(int,probe.stdout.strip().split(","))
             if width * height * scale * scale > LITE_MAX_PIXELS: raise ValueError()
         except ValueError: raise HTTPException(400,"Invalid video or oversized output")
-        filters = {"auto":"eq=contrast=1.05:saturation=1.08,unsharp=3:3:0.4", "natural":"unsharp=3:3:0.3", "vivid":"eq=contrast=1.1:saturation=1.3", "restore":"hqdn3d=2:1.5:3:2,unsharp=3:3:0.3", "cinematic":"eq=contrast=1.16:saturation=1.1"}
+        filters = {"auto":"eq=contrast=1.05:saturation=1.08,unsharp=3:3:0.4", "natural":"unsharp=3:3:0.3", "vivid":"eq=contrast=1.1:saturation=1.3", "restore":"hqdn3d=2:1.5:3:2,unsharp=3:3:0.3", "cinematic":"eq=contrast=1.16:saturation=1.1", "portrait":"hqdn3d=1:1:2:2,eq=contrast=1.03:saturation=1.02"}
         vf = filters[preset] + f",scale=iw*{scale}:ih*{scale}:flags=lanczos,format=yuv420p"
         if not PROCESSING_LOCK.acquire(blocking=False): raise HTTPException(429, "Another job is processing; try again shortly")
         try:
