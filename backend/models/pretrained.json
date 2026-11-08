@@ -1,0 +1,12 @@
+{
+  "fsrcnn": {
+    "filename": "FSRCNN_x2.pb",
+    "url": "https://raw.githubusercontent.com/Saafke/FSRCNN_Tensorflow/cbd81f25d0c54a57da541957a6c64eb0e40eea25/models/FSRCNN_x2.pb",
+    "sha256": "366b33f0084c7b3f2bf6724f0a2c77bca94fcec9d7b6d72389d330073b380d5c"
+  },
+  "espcn": {
+    "filename": "ESPCN_x2.pb",
+    "url": "https://raw.githubusercontent.com/fannymonori/TF-ESPCN/a899033b12cd0400454fb5777600883a9d7e86c3/export/ESPCN_x2.pb",
+    "sha256": "59f77351e1d7c0057bf6fe088b4a8a07e42c468c8c8aebb674a6b4ea1823221d"
+  }
+}

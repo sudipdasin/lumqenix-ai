@@ -1,0 +1,30 @@
+{
+  "virtual_address_limit_bytes": 2147483648,
+  "cases": [
+    {
+      "name": "fsrcnn",
+      "output": [
+        1024,
+        1024
+      ],
+      "seconds": 0.2343
+    },
+    {
+      "name": "espcn",
+      "output": [
+        1024,
+        1024
+      ],
+      "seconds": 0.1598
+    },
+    {
+      "name": "classic",
+      "output": [
+        4000,
+        3000
+      ],
+      "seconds": 0.3202
+    }
+  ],
+  "process_peak_rss_bytes": 592306176
+}

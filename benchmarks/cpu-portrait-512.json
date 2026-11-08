@@ -1,0 +1,84 @@
+{
+  "fsrcnn": {
+    "model": "fsrcnn",
+    "model_file": "/tmp/FSRCNN_x2.pb",
+    "model_sha256": "366b33f0084c7b3f2bf6724f0a2c77bca94fcec9d7b6d72389d330073b380d5c",
+    "python_version": "3.12.14",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "cpu_count_logical": 9,
+    "thread_environment": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null,
+      "NUMEXPR_NUM_THREADS": null
+    },
+    "packages": {
+      "opencv": "4.14.0",
+      "numpy": "2.5.4",
+      "pillow": "12.3.0"
+    },
+    "input_dimensions": [
+      512,
+      512
+    ],
+    "opencv_threads": 2,
+    "status": "ok",
+    "cold_seconds": 0.302031,
+    "seconds": 0.302031,
+    "warm_seconds": [
+      0.18968,
+      0.217879,
+      0.187325
+    ],
+    "warm_mean_seconds": 0.198295,
+    "output_dimensions": [
+      1024,
+      1024
+    ],
+    "output_file": "/tmp/lumqenix-benchmark-portrait/fsrcnn-2x.png",
+    "max_rss_bytes": 426393600,
+    "max_rss_status": "ok"
+  },
+  "espcn": {
+    "model": "espcn",
+    "model_file": "/tmp/ESPCN_x2.pb",
+    "model_sha256": "59f77351e1d7c0057bf6fe088b4a8a07e42c468c8c8aebb674a6b4ea1823221d",
+    "python_version": "3.12.14",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "cpu_count_logical": 9,
+    "thread_environment": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null,
+      "NUMEXPR_NUM_THREADS": null
+    },
+    "packages": {
+      "opencv": "4.14.0",
+      "numpy": "2.5.4",
+      "pillow": "12.3.0"
+    },
+    "input_dimensions": [
+      512,
+      512
+    ],
+    "opencv_threads": 2,
+    "status": "ok",
+    "cold_seconds": 0.228245,
+    "seconds": 0.228245,
+    "warm_seconds": [
+      0.144891,
+      0.13985,
+      0.150685
+    ],
+    "warm_mean_seconds": 0.145142,
+    "output_dimensions": [
+      1024,
+      1024
+    ],
+    "output_file": "/tmp/lumqenix-benchmark-portrait/espcn-2x.png",
+    "max_rss_bytes": 325107712,
+    "max_rss_status": "ok"
+  }
+}

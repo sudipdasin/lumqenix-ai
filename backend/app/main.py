@@ -1,5 +1,6 @@
 import io
 import json
+import math
 import shutil
 import subprocess
 import tempfile
@@ -21,6 +22,8 @@ from .version import VERSION
 app = FastAPI(title="Lumqenix API", version=VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"], allow_methods=["*"], allow_headers=["*"])
 MAX_UPLOAD = 50 * 1024 * 1024
+MAX_VIDEO_OUTPUT = 100 * 1024 * 1024
+MAX_VIDEO_DURATION = 60
 MAX_PIXELS = 32_000_000
 LITE_MAX_PIXELS = 12_000_000
 PROCESSING_LOCK = threading.Lock()
@@ -37,39 +40,48 @@ def brand():
     path = Path(__file__).resolve().parents[2] / "config" / "brand.json"
     return json.loads(path.read_text())
 
-async def read_limited(file: UploadFile):
-    content = await file.read(MAX_UPLOAD + 1)
+def read_limited(file: UploadFile):
+    content = file.file.read(MAX_UPLOAD + 1)
     if len(content) > MAX_UPLOAD: raise HTTPException(413, "File exceeds 50 MB")
     return content
 
 @app.post("/api/analyze")
-async def analyze(file: UploadFile = File(...)):
+def analyze(file: UploadFile = File(...)):
+    data = read_limited(file)
+    if not PROCESSING_LOCK.acquire(blocking=False):
+        raise HTTPException(429, "Another job is processing; try again shortly")
     try:
-        data = await read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
             if image.width * image.height > MAX_PIXELS: raise HTTPException(413, "Image too large")
             return inspect(image)
-    except (UnidentifiedImageError, OSError, ValueError): raise HTTPException(400, "Unsupported or invalid image")
+    except Image.DecompressionBombError as exc:
+        raise HTTPException(413, "Image too large") from exc
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise HTTPException(400, "Unsupported or invalid image")
+    finally:
+        PROCESSING_LOCK.release()
 
 @app.post("/api/enhance/image")
-async def enhance_image(file: UploadFile = File(...), preset: str = Form("auto"), scale: int = Form(2)):
+def enhance_image(file: UploadFile = File(...), preset: str = Form("auto"), scale: int = Form(2)):
     if preset not in PRESETS or scale not in (1,2,4): raise HTTPException(400, "Invalid preset or scale")
     try:
-        data = await read_limited(file)
+        data = read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
             if image.width * image.height * scale * scale > LITE_MAX_PIXELS: raise HTTPException(413, "Lite mode output limit: 12 million pixels. Use a smaller image or lower scale.")
             if not PROCESSING_LOCK.acquire(blocking=False): raise HTTPException(429, "Another job is processing; try again shortly")
             try:
                 result, _ = enhance(image, preset, scale)
+                output = io.BytesIO()
+                result.save(output, format="PNG", optimize=True)
+                return Response(content=output.getvalue(), media_type="image/png", headers={"Content-Disposition":"attachment; filename=enhanced.png"})
             finally:
                 PROCESSING_LOCK.release()
-        output = io.BytesIO()
-        result.save(output, format="PNG", optimize=True)
-        return Response(content=output.getvalue(), media_type="image/png", headers={"Content-Disposition":"attachment; filename=enhanced.png"})
+    except Image.DecompressionBombError as exc:
+        raise HTTPException(413, "Image too large") from exc
     except (UnidentifiedImageError, OSError, ValueError): raise HTTPException(400, "Unsupported or invalid image")
 
 @app.post("/api/enhance/onnx")
-async def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
+def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
                        tile: int = Form(128), overlap: int = Form(16)):
     """Optional AI super-resolution; model must be configured by server operator."""
     if device not in ("auto", "cpu", "gpu") or not 32 <= tile <= 512 or not 0 <= overlap <= 64 or overlap*2 >= tile:
@@ -79,22 +91,24 @@ async def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
         if path is None:
             raise HTTPException(503, "ONNX model not configured")
         scale = configured_scale()
-        data = await read_limited(file)
+        data = read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
             if image.width * image.height * scale * scale > LITE_MAX_PIXELS:
                 raise HTTPException(413, "Lite mode output limit: 12 million pixels")
             if not PROCESSING_LOCK.acquire(blocking=False): raise HTTPException(429, "Another job is processing; try again shortly")
             try:
                 result, used_device = onnx_upscale(image, device, tile, overlap)
+                output = io.BytesIO()
+                result.save(output, format="PNG")
+                return Response(content=output.getvalue(), media_type="image/png",
+                                headers={"Content-Disposition":"attachment; filename=ai-upscaled.png",
+                                         "X-Lumqenix-Device":used_device})
             finally:
                 PROCESSING_LOCK.release()
-        output = io.BytesIO()
-        result.save(output, format="PNG")
-        return Response(content=output.getvalue(), media_type="image/png",
-                        headers={"Content-Disposition":"attachment; filename=ai-upscaled.png",
-                                 "X-Lumqenix-Device":used_device})
     except HTTPException:
         raise
+    except Image.DecompressionBombError as exc:
+        raise HTTPException(413, "Image too large") from exc
     except (UnidentifiedImageError, OSError, ValueError) as exc:
         raise HTTPException(400, str(exc))
     except (RuntimeError, ImportError) as exc:
@@ -102,18 +116,20 @@ async def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
 
 
 @app.post("/api/enhance/fsrcnn")
-async def enhance_fsrcnn(file: UploadFile = File(...), portrait: bool = Form(False),
+def enhance_fsrcnn(file: UploadFile = File(...), portrait: bool = Form(False),
                          portrait_version: int = Form(2), strength: int = Form(35)):
     """Pretrained FSRCNN 2x on CPU, restricted to small images in Lite mode."""
     if portrait_version not in (2, 3) or not 0 <= strength <= 100:
         raise HTTPException(400, "Invalid portrait version or strength")
     if not fsrcnn_available():
         raise HTTPException(503, "FSRCNN unavailable: configure model and OpenCV contrib")
-    data = await read_limited(file)
+    data = read_limited(file)
     try:
         with Image.open(io.BytesIO(data)) as image:
             if image.width * image.height > 512 * 512:
                 raise HTTPException(413, "Neural Lite input limit: 262144 pixels")
+    except Image.DecompressionBombError as exc:
+        raise HTTPException(413, "Image too large") from exc
     except (UnidentifiedImageError, OSError, ValueError) as exc:
         raise HTTPException(400, "Unsupported or invalid image") from exc
     if not PROCESSING_LOCK.acquire(blocking=False):
@@ -127,6 +143,8 @@ async def enhance_fsrcnn(file: UploadFile = File(...), portrait: bool = Form(Fal
                         headers={"Content-Disposition": "attachment; filename=" + ("fsrcnn-portrait-v3-2x.png" if portrait and portrait_version == 3 else "fsrcnn-portrait-2x.png" if portrait else "fsrcnn-2x.png")})
     except HTTPException:
         raise
+    except Image.DecompressionBombError as exc:
+        raise HTTPException(413, "Image too large") from exc
     except (UnidentifiedImageError, OSError, ValueError) as exc:
         raise HTTPException(400, str(exc))
     except (RuntimeError, cv2.error) as exc:
@@ -135,15 +153,17 @@ async def enhance_fsrcnn(file: UploadFile = File(...), portrait: bool = Form(Fal
         PROCESSING_LOCK.release()
 
 @app.post("/api/enhance/espcn")
-async def enhance_espcn(file: UploadFile = File(...)):
+def enhance_espcn(file: UploadFile = File(...)):
     """Experimental pretrained ESPCN x2 CPU mode."""
     if not espcn_available():
         raise HTTPException(503, "ESPCN unavailable: configure LUMQENIX_ESPCN_MODEL")
-    data = await read_limited(file)
+    data = read_limited(file)
     try:
         with Image.open(io.BytesIO(data)) as image:
             if image.width * image.height > 512 * 512:
                 raise HTTPException(413, "Neural Lite input limit: 262144 pixels")
+    except Image.DecompressionBombError as exc:
+        raise HTTPException(413, "Image too large") from exc
     except (UnidentifiedImageError, OSError, ValueError) as exc:
         raise HTTPException(400, "Unsupported or invalid image") from exc
     if not PROCESSING_LOCK.acquire(blocking=False):
@@ -157,6 +177,8 @@ async def enhance_espcn(file: UploadFile = File(...)):
                         headers={"Content-Disposition": "attachment; filename=espcn-2x.png"})
     except HTTPException:
         raise
+    except Image.DecompressionBombError as exc:
+        raise HTTPException(413, "Image too large") from exc
     except (UnidentifiedImageError, OSError, ValueError) as exc:
         raise HTTPException(400, str(exc))
     except (RuntimeError, cv2.error) as exc:
@@ -165,32 +187,49 @@ async def enhance_espcn(file: UploadFile = File(...)):
         PROCESSING_LOCK.release()
 
 @app.post("/api/enhance/video")
-async def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scale: int = Form(2)):
+def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scale: int = Form(2)):
     if preset not in PRESETS or scale not in (1,2,4): raise HTTPException(400, "Invalid preset or scale")
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"): raise HTTPException(503, "FFmpeg and ffprobe required")
-    data = await read_limited(file)
-    with tempfile.TemporaryDirectory() as tmp:
-        src, dst = Path(tmp)/"source", Path(tmp)/"enhanced.mp4"
-        src.write_bytes(data)
-        try:
-            probe = subprocess.run(["ffprobe","-v","error","-select_streams","v:0","-show_entries","stream=width,height","-of","csv=p=0",str(src)],capture_output=True,text=True,timeout=20)
-            if probe.returncode != 0:
-                raise HTTPException(422, "Could not read video stream")
-            width,height = map(int,probe.stdout.strip().split(","))
-            if width <= 0 or height <= 0:
-                raise ValueError("Invalid video dimensions")
-            if width * height * scale * scale > LITE_MAX_PIXELS:
-                raise HTTPException(413, "Lite mode output limit: 12 million pixels")
-        except (ValueError, TypeError):
-            raise HTTPException(422, "Invalid video dimensions")
-        except subprocess.TimeoutExpired:
-            raise HTTPException(422, "Video inspection timed out")
-        filters = {"auto":"eq=contrast=1.05:saturation=1.08,unsharp=3:3:0.4", "natural":"unsharp=3:3:0.3", "vivid":"eq=contrast=1.1:saturation=1.3", "restore":"hqdn3d=2:1.5:3:2,unsharp=3:3:0.3", "cinematic":"eq=contrast=1.16:saturation=1.1", "portrait":"hqdn3d=1:1:2:2,eq=contrast=1.03:saturation=1.02"}
-        vf = filters[preset] + f",scale=iw*{scale}:ih*{scale}:flags=lanczos,format=yuv420p"
-        if not PROCESSING_LOCK.acquire(blocking=False): raise HTTPException(429, "Another job is processing; try again shortly")
-        try:
-            subprocess.run(["ffmpeg","-threads","2","-filter_threads","2","-nostdin","-v","error","-y","-i",str(src),"-vf",vf,"-c:v","libx264","-preset","veryfast","-crf","19","-c:a","aac","-movflags","+faststart",str(dst)],check=True,timeout=180,capture_output=True)
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired): raise HTTPException(422,"Video processing failed or timed out")
-        finally:
-            PROCESSING_LOCK.release()
-        return Response(content=dst.read_bytes(),media_type="video/mp4",headers={"Content-Disposition":"attachment; filename=enhanced.mp4"})
+    data = read_limited(file)
+    if not PROCESSING_LOCK.acquire(blocking=False):
+        raise HTTPException(429, "Another job is processing; try again shortly")
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            src, dst = Path(tmp)/"source", Path(tmp)/"enhanced.mp4"
+            src.write_bytes(data)
+            try:
+                probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0",
+                                        "-show_entries", "stream=width,height,duration:format=duration",
+                                        "-of", "json", str(src)], capture_output=True, text=True, timeout=20)
+                if probe.returncode != 0:
+                    raise HTTPException(422, "Could not read video stream")
+                metadata = json.loads(probe.stdout)
+                stream = metadata["streams"][0]
+                width, height = int(stream["width"]), int(stream["height"])
+                raw_duration = metadata.get("format", {}).get("duration")
+                if raw_duration in (None, "N/A"):
+                    raw_duration = stream.get("duration")
+                duration = float(raw_duration)
+                if width <= 0 or height <= 0 or not math.isfinite(duration) or duration <= 0:
+                    raise ValueError("Invalid video dimensions or duration")
+                if duration > MAX_VIDEO_DURATION:
+                    raise HTTPException(413, "Lite mode video duration limit: 60 seconds")
+                output_width = (width * scale + 1) // 2 * 2
+                output_height = (height * scale + 1) // 2 * 2
+                if output_width * output_height > LITE_MAX_PIXELS:
+                    raise HTTPException(413, "Lite mode output limit: 12 million pixels")
+            except (ValueError, TypeError, KeyError, IndexError, AttributeError, OverflowError):
+                raise HTTPException(422, "Invalid video dimensions or duration")
+            except subprocess.TimeoutExpired:
+                raise HTTPException(422, "Video inspection timed out")
+            filters = {"auto":"eq=contrast=1.05:saturation=1.08,unsharp=3:3:0.4", "natural":"unsharp=3:3:0.3", "vivid":"eq=contrast=1.1:saturation=1.3", "restore":"hqdn3d=2:1.5:3:2,unsharp=3:3:0.3", "cinematic":"eq=contrast=1.16:saturation=1.1", "portrait":"hqdn3d=1:1:2:2,eq=contrast=1.03:saturation=1.02"}
+            vf = filters[preset] + f",scale=iw*{scale}:ih*{scale}:flags=lanczos,pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuv420p"
+            try:
+                subprocess.run(["ffmpeg","-threads","2","-filter_threads","2","-nostdin","-v","error","-y","-i",str(src),"-map","0:v:0","-map","0:a:0?","-vf",vf,"-c:v","libx264","-threads","2","-preset","veryfast","-crf","19","-c:a","aac","-movflags","+faststart",str(dst)],check=True,timeout=180,capture_output=True)
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                raise HTTPException(422,"Video processing failed or timed out")
+            if dst.stat().st_size > MAX_VIDEO_OUTPUT:
+                raise HTTPException(413, "Video output exceeds 100 MB")
+            return Response(content=dst.read_bytes(),media_type="video/mp4",headers={"Content-Disposition":"attachment; filename=enhanced.mp4"})
+    finally:
+        PROCESSING_LOCK.release()

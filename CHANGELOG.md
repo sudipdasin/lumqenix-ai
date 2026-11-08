@@ -2,6 +2,20 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.3.0-dev.1 — Reliability and real-model validation
+- Run blocking API work in the worker pool; status remains responsive and concurrent jobs receive HTTP 429.
+- Hold processing admission through image encoding, analysis, and complete video processing.
+- Return HTTP 413 for Pillow decompression bombs.
+- Restrict Lite video to validated durations up to 60 seconds, pad odd dimensions for H.264, bound buffered output to 100 MiB, map the inspected video stream explicitly, and limit decoder/encoder threads.
+- Respect EXIF orientation in ONNX, reject incompatible static-spatial/float models and non-finite output, and map runtime failures to controlled errors.
+- Cache at most one ONNX session to reduce retained model memory.
+- Add explicit checksum-verified downloads of pinned FSRCNN/ESPCN test weights, real-model API/portrait tests, real ONNX runtime plumbing tests, and real FFmpeg coverage.
+- Add Python 3.10/3.12 CI matrix with separate classic and pretrained-model environments.
+- Benchmark models in isolated processes with cold/warm timings, independent RSS, provenance, and environment metadata.
+- Add reproducible portrait reconstruction evaluation and checked-in measurements under `benchmarks/`.
+- **Verification:** local Python 3.12 tests and real FSRCNN/ESPCN inference executed; see `benchmarks/VALIDATION.md` for exact evidence and limitations.
+- **Not a release candidate yet:** physical 4 GB target-laptop validation and representative user-portrait A/B review remain open; pretrained ONNX enhancement is not validated by the generated graph test.
+
 ## 0.2.3 — Development build
 - Add optional real-model FSRCNN/ESPCN inference checks when weights are configured.
 - Add CPU benchmark script reporting model runtime, dimensions, output path, and process peak RSS.
