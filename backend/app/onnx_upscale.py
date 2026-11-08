@@ -47,7 +47,11 @@ def _session(path, device):
         providers = ["CPUExecutionProvider"]
         if "CPUExecutionProvider" not in available:
             raise RuntimeError("CPU ONNX execution provider unavailable")
-    session = ort.InferenceSession(str(path), providers=providers)
+    options = ort.SessionOptions()
+    options.intra_op_num_threads = max(1, min(2, os.cpu_count() or 1))
+    options.inter_op_num_threads = 1
+    options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+    session = ort.InferenceSession(str(path), sess_options=options, providers=providers)
     if len(session.get_inputs()) != 1 or len(session.get_outputs()) != 1:
         raise ValueError("Model must have one input and one output")
     shape = session.get_inputs()[0].shape
@@ -68,15 +72,16 @@ def upscale(image, device="auto", tile=128, overlap=16):
     session = _session(str(path), actual)
     inp = session.get_inputs()[0]
     outname = session.get_outputs()[0].name
-    arr = np.asarray(image.convert("RGB"), dtype=np.uint8)
-    h, w, _ = arr.shape
+    rgb_image = image.convert("RGB")
+    w, h = rgb_image.size
     output = np.empty((h * scale, w * scale, 3), dtype=np.uint8)
     # The halo provides context; each central tile is copied exactly once.
     for y in range(0, h, tile):
         for x in range(0, w, tile):
             y0, y1 = max(0, y-overlap), min(h, y+tile+overlap)
             x0, x1 = max(0, x-overlap), min(w, x+tile+overlap)
-            patch = arr[y0:y1, x0:x1]
+            # Crop directly from PIL: avoid allocating a full-size NumPy RGB copy.
+            patch = np.asarray(rgb_image.crop((x0,y0,x1,y1)), dtype=np.uint8)
             tensor = np.ascontiguousarray(patch.transpose(2,0,1)[None].astype(np.float32)/255.0)
             result = session.run([outname], {inp.name:tensor})[0]
             expected = (1,3,(y1-y0)*scale,(x1-x0)*scale)
