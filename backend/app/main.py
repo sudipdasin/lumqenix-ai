@@ -16,8 +16,9 @@ from .hardware import detect_hardware
 from .onnx_upscale import upscale as onnx_upscale, model_path, configured_scale
 from .fsrcnn import upscale as fsrcnn_upscale, model_path as fsrcnn_model_path, available as fsrcnn_available
 from .espcn import upscale as espcn_upscale, available as espcn_available
+from .version import VERSION
 
-app = FastAPI(title="Lumqenix API", version="0.1.0")
+app = FastAPI(title="Lumqenix API", version=VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"], allow_methods=["*"], allow_headers=["*"])
 MAX_UPLOAD = 50 * 1024 * 1024
 MAX_PIXELS = 32_000_000
@@ -27,7 +28,7 @@ Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
 @app.get("/api/status")
 def status():
-    return {"status":"ok", "hardware":detect_hardware(), "ai_model_configured":bool(__import__("os").getenv("LUMQENIX_ONNX_MODEL")),
+    return {"status":"ok", "version": VERSION, "hardware":detect_hardware(), "ai_model_configured":bool(__import__("os").getenv("LUMQENIX_ONNX_MODEL")),
             "fsrcnn_available":fsrcnn_available(), "espcn_available":espcn_available(),
             "ffmpeg_available":bool(shutil.which("ffmpeg")), "presets":sorted(PRESETS), "lite_mode": True, "lite_max_output_pixels":LITE_MAX_PIXELS}
 
