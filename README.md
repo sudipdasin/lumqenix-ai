@@ -67,3 +67,20 @@ The browser interface now offers a gentle **Portrait Restore** classic preset, o
 Update a local checkout with `git pull`, stop and restart Uvicorn, and hard-refresh the browser (Ctrl+Shift+R). On a shared Windows/Linux NTFS partition, use a Python environment located on the Linux filesystem.
 
 **Testing status:** Files were committed through GitHub. Full end-to-end runtime and neural-model inference testing on the user's laptop remain outstanding.
+
+## Milestone 4: low-memory neural inference preparation
+
+The optional ONNX runner now limits CPU inference to at most two intra-op threads, uses sequential execution, and crops tiles from Pillow instead of allocating an additional full-size RGB NumPy array. These changes reduce some memory overhead but do not guarantee that arbitrary neural models will fit within 4 GB RAM.
+
+**No neural model weights are bundled or automatically downloaded.** To evaluate a trusted compatible ONNX model, first install `onnxruntime` in an isolated environment (avoid changing a working shared AI environment without a backup), then set `LUMQENIX_ONNX_MODEL` and `LUMQENIX_ONNX_SCALE`. Start with:
+
+```bash
+cd backend
+LUMQENIX_ONNX_MODEL=/absolute/path/model.onnx LUMQENIX_ONNX_SCALE=2 \
+  python scripts/benchmark_onnx.py --input "/path/to/portrait.jpg" \
+  --tile 64 --overlap 8 --max-input-side 256
+```
+
+The benchmark always requests CPU and writes `/tmp/lumqenix-ai-benchmark.png` by default. Model must accept variable NCHW RGB float32 [0,1] patches and produce the configured spatial upscale factor. Models using fixed input shapes, mean/std normalization, alternate channel orders or different output ranges are **not** supported by this adapter. Benchmarks have not yet been run on the target laptop.
+
+A potential alternative for low-RAM experimentation is OpenCV's FSRCNN x2 model, but it uses a TensorFlow `.pb` format and OpenCV's contrib `dnn_superres` interface; it cannot be used directly with the ONNX endpoint. See the official OpenCV dnn_superres documentation for that separate route.
