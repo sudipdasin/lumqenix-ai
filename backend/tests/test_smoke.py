@@ -107,3 +107,36 @@ def test_real_neural_model_when_configured():
             pytest.fail(name + " model path configured but unavailable")
         output = module.upscale(Image.new("RGB", (32, 32), (80, 100, 120)))
         assert output.size == (64, 64), name
+
+def test_empty_video_upload():
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"):
+        result = client.post("/api/enhance/video", files={"file": ("empty.mp4", b"", "video/mp4")})
+    assert result.status_code == 400
+    assert "Empty video" in result.json()["detail"]
+
+def test_video_probe_failure():
+    from subprocess import CompletedProcess
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", return_value=CompletedProcess(["ffprobe"], 1, "", "bad input")
+    ):
+        result = client.post("/api/enhance/video", files={"file": ("broken.mp4", b"invalid", "video/mp4")})
+    assert result.status_code == 422
+    assert "video stream" in result.json()["detail"]
+
+def test_video_probe_timeout():
+    from subprocess import TimeoutExpired
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=TimeoutExpired("ffprobe", 20)
+    ):
+        result = client.post("/api/enhance/video", files={"file": ("slow.mp4", b"invalid", "video/mp4")})
+    assert result.status_code == 422
+    assert "timed out" in result.json()["detail"]
+
+def test_video_oversize_rejected_before_transcode():
+    from subprocess import CompletedProcess
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", return_value=CompletedProcess(["ffprobe"], 0, "4000,3000\n", "")
+    ) as runner:
+        result = client.post("/api/enhance/video", files={"file": ("large.mp4", b"test", "video/mp4")}, data={"scale":"2"})
+    assert result.status_code == 413
+    assert runner.call_count == 1
