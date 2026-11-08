@@ -94,3 +94,16 @@ def test_fsrcnn_invalid_path_does_not_crash_status(monkeypatch):
     result = client.get("/api/status")
     assert result.status_code == 200
     assert result.json()["fsrcnn_available"] is False
+
+def test_real_neural_model_when_configured():
+    """Optional integration test: configure both model paths for real inference."""
+    import os
+    import pytest
+    from app import fsrcnn, espcn
+    for name, module in (("fsrcnn", fsrcnn), ("espcn", espcn)):
+        if not os.environ.get("LUMQENIX_" + name.upper() + "_MODEL"):
+            continue
+        if not module.available():
+            pytest.fail(name + " model path configured but unavailable")
+        output = module.upscale(Image.new("RGB", (32, 32), (80, 100, 120)))
+        assert output.size == (64, 64), name
