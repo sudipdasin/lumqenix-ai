@@ -2,6 +2,13 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.2.3 — Development build
+- Add optional real-model FSRCNN/ESPCN inference checks when weights are configured.
+- Add CPU benchmark script reporting model runtime, dimensions, output path, and process peak RSS.
+- Add frontend JavaScript syntax validation to CI.
+- Improve invalid-video, oversized-video, and ffprobe timeout handling.
+- **Verification:** GitHub workflow status and real ESPCN model inference are not yet confirmed.
+
 ## 0.2.2 — Development build
 - Return HTTP 413 before invoking FSRCNN or ESPCN for images above the neural Lite input cap.
 - Validate neural input before taking the CPU processing lock.
