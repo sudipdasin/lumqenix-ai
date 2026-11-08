@@ -100,8 +100,11 @@ async def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
 
 
 @app.post("/api/enhance/fsrcnn")
-async def enhance_fsrcnn(file: UploadFile = File(...), portrait: bool = Form(False)):
+async def enhance_fsrcnn(file: UploadFile = File(...), portrait: bool = Form(False),
+                         portrait_version: int = Form(2), strength: int = Form(35)):
     """Pretrained FSRCNN 2x on CPU, restricted to small images in Lite mode."""
+    if portrait_version not in (2, 3) or not 0 <= strength <= 100:
+        raise HTTPException(400, "Invalid portrait version or strength")
     if not fsrcnn_available():
         raise HTTPException(503, "FSRCNN unavailable: configure model and OpenCV contrib")
     if not PROCESSING_LOCK.acquire(blocking=False):
@@ -109,11 +112,11 @@ async def enhance_fsrcnn(file: UploadFile = File(...), portrait: bool = Form(Fal
     try:
         data = await read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
-            result = fsrcnn_upscale(image, portrait=portrait)
+            result = fsrcnn_upscale(image, portrait=("v3" if portrait and portrait_version == 3 else portrait), strength=strength)
         output = io.BytesIO()
         result.save(output, format="PNG")
         return Response(content=output.getvalue(), media_type="image/png",
-                        headers={"Content-Disposition":"attachment; filename=fsrcnn-portrait-2x.png" if portrait else "attachment; filename=fsrcnn-2x.png"})
+                        headers={"Content-Disposition": "attachment; filename=" + ("fsrcnn-portrait-v3-2x.png" if portrait and portrait_version == 3 else "fsrcnn-portrait-2x.png" if portrait else "fsrcnn-2x.png")})
     except HTTPException:
         raise
     except (UnidentifiedImageError, OSError, ValueError) as exc:
