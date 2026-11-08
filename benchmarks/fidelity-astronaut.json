@@ -1,0 +1,38 @@
+{
+  "source_sha256": "88431cd9653ccd539741b555fb0a46b61558b301d4110412b5bc28b5e3ea6cb5",
+  "reference_dimensions": [
+    512,
+    512
+  ],
+  "metrics": {
+    "lanczos": {
+      "psnr_db": 31.0302,
+      "mae_rgb": 3.4972
+    },
+    "fsrcnn": {
+      "psnr_db": 31.5632,
+      "mae_rgb": 3.4441
+    },
+    "espcn": {
+      "psnr_db": 31.5511,
+      "mae_rgb": 3.475
+    },
+    "portrait-v2": {
+      "psnr_db": 31.4145,
+      "mae_rgb": 3.6975
+    },
+    "portrait-v3-0": {
+      "psnr_db": 31.5632,
+      "mae_rgb": 3.4441
+    },
+    "portrait-v3-35": {
+      "psnr_db": 31.4644,
+      "mae_rgb": 3.6256
+    },
+    "portrait-v3-100": {
+      "psnr_db": 31.4085,
+      "mae_rgb": 3.6964
+    }
+  },
+  "strength_zero_matches_baseline": true
+}

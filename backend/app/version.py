@@ -1,2 +1,2 @@
-"""Single source of truth for Lumqenix API release version."""
-VERSION = "0.2.3"
+"""Single source of truth for the backend semantic version."""
+VERSION = '0.3.0-dev.1'

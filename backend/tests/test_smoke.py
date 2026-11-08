@@ -100,6 +100,8 @@ def test_real_neural_model_when_configured():
     import os
     import pytest
     from app import fsrcnn, espcn
+    if not any(os.environ.get("LUMQENIX_" + name + "_MODEL") for name in ("FSRCNN", "ESPCN")):
+        pytest.skip("Pretrained weights not configured")
     for name, module in (("fsrcnn", fsrcnn), ("espcn", espcn)):
         if not os.environ.get("LUMQENIX_" + name.upper() + "_MODEL"):
             continue

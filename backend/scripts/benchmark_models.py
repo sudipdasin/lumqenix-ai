@@ -1,55 +1,198 @@
-"""Benchmark actual FSRCNN and ESPCN models on the same image.
+"""Benchmark local FSRCNN and ESPCN x2 models in isolated CPU processes.
 
-Requires the isolated OpenCV-contrib environment and configured pretrained weights.
-No scores are fabricated if a model is unavailable.
-Usage:
-  python scripts/benchmark_models.py --input /path/to/portrait.png --output-dir /tmp/lumqenix-benchmark
+Models are never downloaded. Configure LUMQENIX_FSRCNN_MODEL and/or
+LUMQENIX_ESPCN_MODEL with paths to trusted .pb files before running.
 """
 import argparse
+import hashlib
 import json
 import os
-import resource
-import time
+import platform
+import subprocess
 import sys
+import time
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from PIL import Image
-from app import fsrcnn, espcn
 
-def run(input_path, output_dir):
+
+MODEL_ENV = {"fsrcnn": "LUMQENIX_FSRCNN_MODEL", "espcn": "LUMQENIX_ESPCN_MODEL"}
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as model_file:
+        for chunk in iter(lambda: model_file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def package_version(package):
+    try:
+        from importlib.metadata import PackageNotFoundError, version
+        try:
+            return version(package)
+        except PackageNotFoundError:
+            return None
+    except ImportError:  # Python < 3.8
+        return None
+
+
+def worker(model_name, input_path, output_path, repeats):
+    """Run inside one child process so peak RSS is model-specific."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from PIL import Image, ImageOps
+    import cv2
+    import numpy as np
+    from app import fsrcnn, espcn
+
+    module = fsrcnn if model_name == "fsrcnn" else espcn
+    env_path = os.environ.get(MODEL_ENV[model_name], "").strip()
+    model_path = Path(env_path).expanduser() if env_path else None
+    try:
+        model_path = model_path.resolve() if model_path else None
+    except OSError:
+        model_path = None
+
+    base = {
+        "model": model_name,
+        "model_file": str(model_path) if model_path else None,
+        "model_sha256": sha256_file(model_path) if model_path and model_path.is_file() else None,
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
+        "machine": platform.machine(),
+        "cpu_count_logical": os.cpu_count(),
+        "thread_environment": {key: os.environ.get(key) for key in (
+            "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"
+        )},
+        "packages": {
+            "opencv": cv2.__version__,
+            "numpy": np.__version__,
+            "pillow": package_version("Pillow"),
+        },
+    }
+    if not model_path or not model_path.is_file():
+        base.update(status="unavailable", reason="model file is not configured or does not exist")
+        return base
+    if not module.available():
+        base.update(status="unavailable", reason="OpenCV contrib dnn_superres is unavailable")
+        return base
+
+    try:
+        with Image.open(input_path) as source:
+            image = ImageOps.exif_transpose(source).convert("RGB")
+        base["input_dimensions"] = list(image.size)
+
+        start = time.perf_counter()
+        output = module.upscale(image.copy())
+        cold_seconds = time.perf_counter() - start
+        base["opencv_threads"] = cv2.getNumThreads()
+        warm_seconds = []
+        for _ in range(repeats):
+            start = time.perf_counter()
+            output = module.upscale(image.copy())
+            warm_seconds.append(time.perf_counter() - start)
+        output.save(output_path)
+
+        rss_bytes = None
+        rss_status = "unavailable"
+        try:
+            import resource
+            max_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            # getrusage reports bytes on macOS, KiB on Linux and other BSDs.
+            rss_bytes = int(max_rss if sys.platform == "darwin" else max_rss * 1024)
+            rss_status = "ok"
+        except (ImportError, AttributeError, OSError):
+            pass
+
+        base.update(
+            status="ok",
+            cold_seconds=round(cold_seconds, 6),
+            seconds=round(cold_seconds, 6),
+            warm_seconds=[round(value, 6) for value in warm_seconds],
+            warm_mean_seconds=round(sum(warm_seconds) / len(warm_seconds), 6),
+            output_dimensions=list(output.size),
+            output_file=str(output_path),
+            max_rss_bytes=rss_bytes,
+            max_rss_status=rss_status,
+        )
+    except Exception as exc:
+        base.update(status="failed", error=f"{type(exc).__name__}: {exc}")
+    return base
+
+
+def run(input_path, output_dir, repeats=3, timeout=180, require_models=False):
     output_dir.mkdir(parents=True, exist_ok=True)
     results = {}
-    for name, module in (("fsrcnn", fsrcnn), ("espcn", espcn)):
-        if not module.available():
-            results[name] = {"status": "unavailable", "reason": "model path or OpenCV contrib missing"}
+    for name in MODEL_ENV:
+        env_path = os.environ.get(MODEL_ENV[name], "").strip()
+        model_file = Path(env_path).expanduser() if env_path else None
+        is_configured = bool(model_file and model_file.is_file() and model_file.suffix.lower() == ".pb")
+        if not is_configured:
+            results[name] = {
+                "status": "unavailable",
+                "reason": "model file is not configured or does not exist",
+                "model_file": str(model_file) if model_file else None,
+                "model_sha256": None,
+            }
             continue
-        with Image.open(input_path) as source:
-            t0 = time.perf_counter()
-            try:
-                output = module.upscale(source)
-            except Exception as exc:
-                results[name] = {"status": "failed", "error": str(exc)}
+
+        output_path = output_dir / f"{name}-2x.png"
+        command = [
+            sys.executable, str(Path(__file__).resolve()), "--_worker", name,
+            "--input", str(input_path), "--_output", str(output_path),
+            "--repeats", str(repeats),
+        ]
+        try:
+            completed = subprocess.run(
+                command, capture_output=True, text=True, timeout=timeout,
+                check=False, env=os.environ.copy(),
+            )
+            if completed.returncode != 0:
+                results[name] = {
+                    "status": "failed",
+                    "error": (completed.stderr.strip() or completed.stdout.strip() or
+                              f"worker exited with code {completed.returncode}"),
+                }
                 continue
-            elapsed = time.perf_counter() - t0
-        path = output_dir / f"{name}-2x.png"
-        output.save(path)
-        results[name] = {
-            "status": "ok",
-            "seconds": round(elapsed, 4),
-            "output_dimensions": list(output.size),
-            "output_file": str(path),
-            "max_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
-        }
+            try:
+                results[name] = json.loads(completed.stdout)
+            except json.JSONDecodeError as exc:
+                results[name] = {"status": "failed", "error": f"invalid worker output: {exc}"}
+        except subprocess.TimeoutExpired:
+            results[name] = {"status": "failed", "error": f"benchmark timed out after {timeout} seconds"}
+
     return results
 
+
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, default=Path("/tmp/lumqenix-model-benchmark"))
+    parser.add_argument("--repeats", type=int, default=3, help="warm runs per model (default: 3)")
+    parser.add_argument("--timeout", type=int, default=180, help="seconds allowed per model process")
+    parser.add_argument("--require-models", action="store_true", help="exit nonzero if a model file is missing")
+    parser.add_argument("--_worker", choices=tuple(MODEL_ENV), help=argparse.SUPPRESS)
+    parser.add_argument("--_output", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args._worker:
+        print(json.dumps(worker(args._worker, args.input, args._output, args.repeats)))
+        return 0
     if not args.input.is_file():
         parser.error("Input image does not exist")
-    print(json.dumps(run(args.input, args.output_dir), indent=2))
+    if args.repeats < 1:
+        parser.error("--repeats must be at least 1")
+    if args.timeout < 1:
+        parser.error("--timeout must be at least 1")
+
+    missing = [name for name, env_name in MODEL_ENV.items()
+               if not os.environ.get(env_name, "").strip()
+               or not Path(os.environ[env_name]).expanduser().is_file()
+               or Path(os.environ[env_name]).suffix.lower() != ".pb"]
+    results = run(args.input, args.output_dir, args.repeats, args.timeout, args.require_models)
+    print(json.dumps(results, indent=2))
+    if args.require_models and (missing or any(result.get("status") != "ok" for result in results.values())):
+        return 1
+    return 1 if any(result.get("status") == "failed" for result in results.values()) else 0
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
