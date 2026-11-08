@@ -2,6 +2,12 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.2.4 — Development build
+- Reject empty video uploads with a clear 400 response.
+- Reject missing or empty transcoder output rather than returning an invalid MP4.
+- Add regression tests for empty video, probe failure, probe timeout, and oversized video.
+- **Verification:** test execution and real-device benchmarks remain outstanding; not a release candidate.
+
 ## 0.2.3 — Development build
 - Add optional real-model FSRCNN/ESPCN inference checks when weights are configured.
 - Add CPU benchmark script reporting model runtime, dimensions, output path, and process peak RSS.
