@@ -71,3 +71,26 @@ def test_espcn_engine_model_stub(monkeypatch, tmp_path):
     with patch("app.espcn._model", return_value=FakeNetwork()):
         output = espcn.upscale(Image.new("RGB", (20, 16)))
     assert output.size == (40, 32)
+
+def test_espcn_rejects_oversized_image_before_inference():
+    with patch("app.main.espcn_available", return_value=True), patch("app.main.espcn_upscale") as model:
+        result = client.post("/api/enhance/espcn", files={"file": ("large.png", png(513, 512), "image/png")})
+    assert result.status_code == 413, result.text
+    model.assert_not_called()
+
+def test_fsrcnn_rejects_oversized_image_before_inference():
+    with patch("app.main.fsrcnn_available", return_value=True), patch("app.main.fsrcnn_upscale") as model:
+        result = client.post("/api/enhance/fsrcnn", files={"file": ("large.png", png(513, 512), "image/png")})
+    assert result.status_code == 413, result.text
+    model.assert_not_called()
+
+def test_espcn_rejects_invalid_image():
+    with patch("app.main.espcn_available", return_value=True):
+        result = client.post("/api/enhance/espcn", files={"file": ("bad.png", b"not an image", "image/png")})
+    assert result.status_code == 400
+
+def test_fsrcnn_invalid_path_does_not_crash_status(monkeypatch):
+    monkeypatch.setenv("LUMQENIX_FSRCNN_MODEL", "/missing/model.pb")
+    result = client.get("/api/status")
+    assert result.status_code == 200
+    assert result.json()["fsrcnn_available"] is False
