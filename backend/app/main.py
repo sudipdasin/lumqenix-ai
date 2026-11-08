@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 import os
 import threading
+import cv2
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,7 @@ from PIL import Image, UnidentifiedImageError
 from .engine import enhance, inspect, PRESETS
 from .hardware import detect_hardware
 from .onnx_upscale import upscale as onnx_upscale, model_path, configured_scale
+from .fsrcnn import upscale as fsrcnn_upscale, model_path as fsrcnn_model_path, available as fsrcnn_available
 
 app = FastAPI(title="Lumqenix API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"], allow_methods=["*"], allow_headers=["*"])
@@ -25,6 +27,7 @@ Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 @app.get("/api/status")
 def status():
     return {"status":"ok", "hardware":detect_hardware(), "ai_model_configured":bool(__import__("os").getenv("LUMQENIX_ONNX_MODEL")),
+            "fsrcnn_available":fsrcnn_available(),
             "ffmpeg_available":bool(shutil.which("ffmpeg")), "presets":sorted(PRESETS), "lite_mode": True, "lite_max_output_pixels":LITE_MAX_PIXELS}
 
 @app.get("/api/brand")
@@ -94,6 +97,31 @@ async def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
         raise HTTPException(400, str(exc))
     except (RuntimeError, ImportError) as exc:
         raise HTTPException(503, str(exc))
+
+
+@app.post("/api/enhance/fsrcnn")
+async def enhance_fsrcnn(file: UploadFile = File(...)):
+    """Pretrained FSRCNN 2x on CPU, restricted to small images in Lite mode."""
+    if not fsrcnn_available():
+        raise HTTPException(503, "FSRCNN unavailable: configure model and OpenCV contrib")
+    if not PROCESSING_LOCK.acquire(blocking=False):
+        raise HTTPException(429, "Another job is processing; try again shortly")
+    try:
+        data = await read_limited(file)
+        with Image.open(io.BytesIO(data)) as image:
+            result = fsrcnn_upscale(image)
+        output = io.BytesIO()
+        result.save(output, format="PNG")
+        return Response(content=output.getvalue(), media_type="image/png",
+                        headers={"Content-Disposition":"attachment; filename=fsrcnn-2x.png"})
+    except HTTPException:
+        raise
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise HTTPException(400, str(exc))
+    except (RuntimeError, cv2.error) as exc:
+        raise HTTPException(503, str(exc))
+    finally:
+        PROCESSING_LOCK.release()
 
 @app.post("/api/enhance/video")
 async def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scale: int = Form(2)):
