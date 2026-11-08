@@ -29,6 +29,7 @@ def available():
 def _model(path):
     if not hasattr(cv2, "dnn_superres"):
         raise RuntimeError("OpenCV dnn_superres unavailable; install compatible opencv-contrib-python-headless in an isolated environment")
+    cv2.setNumThreads(2)
     sr = cv2.dnn_superres.DnnSuperResImpl_create()
     sr.readModel(path)
     sr.setModel("fsrcnn", 2)
