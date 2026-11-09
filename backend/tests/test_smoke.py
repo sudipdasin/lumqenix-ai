@@ -2,7 +2,6 @@
 import io
 from unittest.mock import patch
 import cv2
-import numpy as np
 from PIL import Image
 from fastapi.testclient import TestClient
 from app.main import app
@@ -190,3 +189,11 @@ def test_video_probe_failure_releases_processing_lock():
     assert result.status_code == 422
     assert PROCESSING_LOCK.acquire(blocking=False)
     PROCESSING_LOCK.release()
+
+def test_opencv_contrib_super_resolution_module_installed():
+    """The documented base install must include the neural CPU engine."""
+    assert hasattr(cv2, "dnn_superres"), "Install opencv-contrib-python-headless, not opencv-python-headless"
+
+def test_classic_rejects_oversized_output():
+    result = client.post("/api/enhance/image", files={"file": ("large.png", png(2000, 1600), "image/png")}, data={"scale": "2"})
+    assert result.status_code == 413
