@@ -53,7 +53,7 @@ async def analyze(file: UploadFile = File(...)):
         with Image.open(io.BytesIO(data)) as image:
             if image.width * image.height > MAX_PIXELS: raise HTTPException(413, "Image too large")
             return inspect(image)
-    except (UnidentifiedImageError, OSError, ValueError): raise HTTPException(400, "Unsupported or invalid image")
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError): raise HTTPException(400, "Unsupported or invalid image")
 
 @app.post("/api/enhance/image")
 async def enhance_image(file: UploadFile = File(...), preset: str = Form("auto"), scale: int = Form(2)):
@@ -70,7 +70,7 @@ async def enhance_image(file: UploadFile = File(...), preset: str = Form("auto")
         output = io.BytesIO()
         result.save(output, format="PNG", optimize=True)
         return Response(content=output.getvalue(), media_type="image/png", headers={"Content-Disposition":"attachment; filename=enhanced.png"})
-    except (UnidentifiedImageError, OSError, ValueError): raise HTTPException(400, "Unsupported or invalid image")
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError): raise HTTPException(400, "Unsupported or invalid image")
 
 @app.post("/api/enhance/onnx")
 async def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
@@ -102,7 +102,7 @@ async def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
                                  "X-Lumqenix-Device":used_device})
     except HTTPException:
         raise
-    except (UnidentifiedImageError, OSError, ValueError) as exc:
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError) as exc:
         raise HTTPException(400, str(exc))
     except (RuntimeError, ImportError) as exc:
         raise HTTPException(503, str(exc))
@@ -121,7 +121,7 @@ async def enhance_fsrcnn(file: UploadFile = File(...), portrait: bool = Form(Fal
         with Image.open(io.BytesIO(data)) as image:
             if image.width * image.height > 512 * 512:
                 raise HTTPException(413, "Neural Lite input limit: 262144 pixels")
-    except (UnidentifiedImageError, OSError, ValueError) as exc:
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError) as exc:
         raise HTTPException(400, "Unsupported or invalid image") from exc
     if not PROCESSING_LOCK.acquire(blocking=False):
         raise HTTPException(429, "Another job is processing; try again shortly")
@@ -134,7 +134,7 @@ async def enhance_fsrcnn(file: UploadFile = File(...), portrait: bool = Form(Fal
                         headers={"Content-Disposition": "attachment; filename=" + ("fsrcnn-portrait-v3-2x.png" if portrait and portrait_version == 3 else "fsrcnn-portrait-2x.png" if portrait else "fsrcnn-2x.png")})
     except HTTPException:
         raise
-    except (UnidentifiedImageError, OSError, ValueError) as exc:
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError) as exc:
         raise HTTPException(400, str(exc))
     except (RuntimeError, cv2.error) as exc:
         raise HTTPException(503, str(exc))
@@ -151,7 +151,7 @@ async def enhance_espcn(file: UploadFile = File(...)):
         with Image.open(io.BytesIO(data)) as image:
             if image.width * image.height > 512 * 512:
                 raise HTTPException(413, "Neural Lite input limit: 262144 pixels")
-    except (UnidentifiedImageError, OSError, ValueError) as exc:
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError) as exc:
         raise HTTPException(400, "Unsupported or invalid image") from exc
     if not PROCESSING_LOCK.acquire(blocking=False):
         raise HTTPException(429, "Another job is processing; try again shortly")
@@ -164,7 +164,7 @@ async def enhance_espcn(file: UploadFile = File(...)):
                         headers={"Content-Disposition": "attachment; filename=espcn-2x.png"})
     except HTTPException:
         raise
-    except (UnidentifiedImageError, OSError, ValueError) as exc:
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError) as exc:
         raise HTTPException(400, str(exc))
     except (RuntimeError, cv2.error) as exc:
         raise HTTPException(503, str(exc))
