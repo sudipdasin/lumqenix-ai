@@ -55,3 +55,33 @@ def test_missing_encoded_video_returns_422():
     ):
         response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
     assert response.status_code == 422
+
+def test_video_output_cap_rejected_before_loading(monkeypatch):
+    from app import main
+    def runner(args, **kwargs):
+        if args[0] == "ffprobe":
+            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+        Path(args[-1]).write_bytes(b"oversized")
+        return CompletedProcess(args, 0, b"", b"")
+    monkeypatch.setattr(main, "MAX_VIDEO_OUTPUT", 4)
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 413
+
+def test_video_output_within_cap_returns_mp4(monkeypatch):
+    from app import main
+    def runner(args, **kwargs):
+        if args[0] == "ffprobe":
+            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+        Path(args[-1]).write_bytes(b"mp4data")
+        return CompletedProcess(args, 0, b"", b"")
+    monkeypatch.setattr(main, "MAX_VIDEO_OUTPUT", 7)
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 200
+    assert response.content == b"mp4data"
+    assert response.headers["content-type"].startswith("video/mp4")
