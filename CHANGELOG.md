@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.2.9 — Development build
+- Catch Pillow decompression-bomb errors in image analysis, Classic, ONNX, FSRCNN and ESPCN paths, returning controlled HTTP 400 instead of server errors.
+- Add regression checks for decompression-bomb handling in image analysis, Classic, and ESPCN.
+- **Verification:** committed tests are not yet confirmed passing in CI; no real-device benchmark or ESPCN model validation. Not a release candidate.
+
 ## 0.2.8 — Development build
 - Expand GitHub Actions CPU smoke-test triggers to development branches and manual dispatch, rather than main pushes only.
 - **Verification:** CI execution still requires checking actual workflow runs; not a release candidate.
