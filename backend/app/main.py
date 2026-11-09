@@ -21,6 +21,7 @@ from .version import VERSION
 app = FastAPI(title="Lumqenix API", version=VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"], allow_methods=["*"], allow_headers=["*"])
 MAX_UPLOAD = 50 * 1024 * 1024
+MAX_VIDEO_OUTPUT = 100 * 1024 * 1024
 MAX_PIXELS = 32_000_000
 LITE_MAX_PIXELS = 12_000_000
 PROCESSING_LOCK = threading.Lock()
@@ -216,4 +217,6 @@ def _process_video(data: bytes, preset: str, scale: int):
             raise HTTPException(503, "Video processing tool could not start") from exc
         if not dst.is_file() or dst.stat().st_size == 0:
             raise HTTPException(422, "Video processing produced no output")
+        if dst.stat().st_size > MAX_VIDEO_OUTPUT:
+            raise HTTPException(413, "Enhanced video exceeds 100 MB output limit")
         return Response(content=dst.read_bytes(),media_type="video/mp4",headers={"Content-Disposition":"attachment; filename=enhanced.mp4"})
