@@ -2,6 +2,12 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.2.7 — Development build
+- Replace base OpenCV headless dependency with OpenCV contrib headless so FSRCNN/ESPCN `dnn_superres` can actually be imported in a fresh install.
+- Add dependency and classic output-limit regression checks.
+- Ensure frontend backend-connection indicator handles non-2xx status responses.
+- **Verification:** GitHub CI and real-model performance tests are still pending; not a release candidate.
+
 ## 0.2.6 — Development build
 - Hold the global processing lock throughout video probing, encoding, and reading the completed output, preventing overlapping CPU-intensive jobs.
 - Add concurrency and lock-release regression tests for video processing.
