@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.3.0-dev.6 — Temporary video staging resilience
+- Catch filesystem errors while staging the uploaded video, return HTTP 503 and always release the single-job processing lock.
+- Add regression coverage for permission-denied staging, no FFmpeg subprocess launch, and lock recovery.
+- **Verification:** new test committed, not yet executed; CI and target-hardware validation remain pending.
+
 ## 0.3.0-dev.5 — Video failure recovery regression coverage
 - Add regression checks that the single-job processing lock is released when FFmpeg fails to launch, and that missing output after FFmpeg returns success produces HTTP 422.
 - **Verification:** new tests are committed but have not been executed in this session; CI status remains unconfirmed. Not a release candidate.
