@@ -2,6 +2,10 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.3.0-dev.5 — Video failure recovery regression coverage
+- Add regression checks that the single-job processing lock is released when FFmpeg fails to launch, and that missing output after FFmpeg returns success produces HTTP 422.
+- **Verification:** new tests are committed but have not been executed in this session; CI status remains unconfirmed. Not a release candidate.
+
 ## 0.3.0-dev.4 — Encoded video read resilience
 - Convert missing output files to HTTP 422 and unreadable encoded video output to HTTP 503, without exposing a server traceback.
 - Add a regression test simulating permission-denied output reads after successful FFmpeg execution.
