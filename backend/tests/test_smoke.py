@@ -166,3 +166,27 @@ def test_onnx_unconfigured_returns_503(monkeypatch):
     monkeypatch.delenv("LUMQENIX_ONNX_MODEL", raising=False)
     result = client.post("/api/enhance/onnx", files={"file": ("small.png", png(), "image/png")})
     assert result.status_code == 503
+
+def test_video_processing_lock_rejects_concurrent_job():
+    from app.main import PROCESSING_LOCK
+    assert PROCESSING_LOCK.acquire(blocking=False)
+    try:
+        with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+            "app.main.subprocess.run"
+        ) as runner:
+            result = client.post("/api/enhance/video", files={"file": ("small.mp4", b"not-empty", "video/mp4")})
+        assert result.status_code == 429
+        runner.assert_not_called()
+    finally:
+        PROCESSING_LOCK.release()
+
+def test_video_probe_failure_releases_processing_lock():
+    from app.main import PROCESSING_LOCK
+    from subprocess import CompletedProcess
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", return_value=CompletedProcess(["ffprobe"], 1, "", "bad input")
+    ):
+        result = client.post("/api/enhance/video", files={"file": ("bad.mp4", b"bad", "video/mp4")})
+    assert result.status_code == 422
+    assert PROCESSING_LOCK.acquire(blocking=False)
+    PROCESSING_LOCK.release()
