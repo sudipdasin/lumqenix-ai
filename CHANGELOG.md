@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — MP4 output size race safeguard
+- Recheck enhanced MP4 byte length after reading, preventing a file that grows between stat and read from bypassing the response-size limit.
+- Add regression test simulating a small stat size but oversized read result.
+- **Verification:** new regression test not executed; version remains 0.3.0-dev.7 pending full-suite validation.
+
 ## 0.3.0-dev.7 — Upload reader resilience
 - Convert OSError when reading uploaded files into controlled HTTP 503 across API endpoints.
 - Add regression tests for unreadable uploads and exact/oversized upload limit boundaries.
