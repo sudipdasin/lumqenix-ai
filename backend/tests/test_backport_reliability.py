@@ -195,3 +195,21 @@ def test_video_output_cap_rechecked_after_read(monkeypatch):
     ), patch.object(Path, "read_bytes", enlarged_read):
         response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
     assert response.status_code == 413
+
+def test_video_output_empty_after_stat_returns_422():
+    def runner(args, **kwargs):
+        if args[0] == "ffprobe":
+            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+        Path(args[-1]).write_bytes(b"mp4")
+        return CompletedProcess(args, 0, b"", b"")
+    original_read = Path.read_bytes
+    def empty_read(path):
+        if path.name == "enhanced.mp4":
+            return b""
+        return original_read(path)
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ), patch.object(Path, "read_bytes", empty_read):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 422
+    assert "produced no output" in response.json()["detail"]
