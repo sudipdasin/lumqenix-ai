@@ -136,3 +136,14 @@ def test_video_missing_after_encoder_returns_422():
         response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
     assert response.status_code == 422
     assert "produced no output" in response.json()["detail"]
+
+def test_video_staging_write_error_returns_503_and_unlocks():
+    from app.main import PROCESSING_LOCK
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch.object(
+        Path, "write_bytes", side_effect=PermissionError("disk is read-only")
+    ), patch("app.main.subprocess.run") as run:
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 503
+    assert "staging failed" in response.json()["detail"]
+    assert not PROCESSING_LOCK.locked()
+    run.assert_not_called()
