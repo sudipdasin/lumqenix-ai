@@ -85,3 +85,11 @@ def test_video_output_within_cap_returns_mp4(monkeypatch):
     assert response.status_code == 200
     assert response.content == b"mp4data"
     assert response.headers["content-type"].startswith("video/mp4")
+
+def test_empty_video_upload_rejected_before_ffprobe():
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run"
+    ) as run:
+        response = client.post("/api/enhance/video", files={"file": ("empty.mp4", b"", "video/mp4")})
+    assert response.status_code == 400
+    run.assert_not_called()
