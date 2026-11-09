@@ -198,6 +198,8 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
     if preset not in PRESETS or scale not in (1,2,4): raise HTTPException(400, "Invalid preset or scale")
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"): raise HTTPException(503, "FFmpeg and ffprobe required")
     data = read_limited(file)
+    if not data:
+        raise HTTPException(400, "Empty video upload")
     if not PROCESSING_LOCK.acquire(blocking=False):
         raise HTTPException(429, "Another job is processing; try again shortly")
     try:
