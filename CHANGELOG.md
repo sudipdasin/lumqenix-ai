@@ -2,6 +2,12 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.3.0-dev.2 — ONNX and FFmpeg regression hardening
+- Validate ONNX model readiness and invalid model configuration rather than reporting any configured path as ready.
+- Handle ffprobe/ffmpeg executable launch errors as HTTP 503 and missing encoded video as HTTP 422.
+- Add five targeted regression tests for ONNX readiness, invalid ONNX configuration, and FFmpeg failure cases.
+- **Verification:** new changes are committed but have not yet been rerun; 102-pass evidence applies to 0.3.0-dev.1 only. Not a release candidate.
+
 ## 0.3.0-dev.1 — Reliability and real-model validation
 - Run blocking API work in the worker pool; status remains responsive and concurrent jobs receive HTTP 429.
 - Hold processing admission through image encoding, analysis, and complete video processing.
