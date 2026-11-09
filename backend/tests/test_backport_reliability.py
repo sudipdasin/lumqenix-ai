@@ -147,3 +147,32 @@ def test_video_staging_write_error_returns_503_and_unlocks():
     assert "staging failed" in response.json()["detail"]
     assert not PROCESSING_LOCK.locked()
     run.assert_not_called()
+
+def test_upload_read_failure_returns_503():
+    from app.main import read_limited
+    from fastapi import HTTPException
+    from types import SimpleNamespace
+    class FailingFile:
+        def read(self, size):
+            raise OSError("temporary upload is unreadable")
+    try:
+        read_limited(SimpleNamespace(file=FailingFile()))
+    except HTTPException as exc:
+        assert exc.status_code == 503
+        assert "could not be read" in exc.detail
+    else:
+        raise AssertionError("Expected HTTP 503 for failed upload read")
+
+def test_upload_limit_boundary(monkeypatch):
+    from app import main
+    from types import SimpleNamespace
+    monkeypatch.setattr(main, "MAX_UPLOAD", 4)
+    assert main.read_limited(SimpleNamespace(file=io.BytesIO(b"1234"))) == b"1234"
+    try:
+        main.read_limited(SimpleNamespace(file=io.BytesIO(b"12345")))
+    except Exception as exc:
+        from fastapi import HTTPException
+        assert isinstance(exc, HTTPException)
+        assert exc.status_code == 413
+    else:
+        raise AssertionError("Expected HTTP 413 for oversized upload")
