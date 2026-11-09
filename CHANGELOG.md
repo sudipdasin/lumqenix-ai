@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.3.0-dev.3 — Video input and output boundary coverage
+- Reject empty video uploads with HTTP 400 before acquiring the processing lock or launching FFmpeg.
+- Add three regression tests for empty uploads, oversized enhanced MP4 responses and output exactly at the configured size limit.
+- **Verification:** changes committed; CI and newly added tests not yet confirmed passing. Not a release candidate.
+
 ## 0.3.0-dev.2 — ONNX and FFmpeg regression hardening
 - Validate ONNX model readiness and invalid model configuration rather than reporting any configured path as ready.
 - Handle ffprobe/ffmpeg executable launch errors as HTTP 503 and missing encoded video as HTTP 422.
