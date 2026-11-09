@@ -31,7 +31,11 @@ Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
 @app.get("/api/status")
 def status():
-    return {"status":"ok", "version": VERSION, "hardware":detect_hardware(), "ai_model_configured":bool(__import__("os").getenv("LUMQENIX_ONNX_MODEL")),
+    try:
+        onnx_ready = model_path() is not None and configured_scale() in (2, 4)
+    except ValueError:
+        onnx_ready = False
+    return {"status":"ok", "version": VERSION, "hardware":detect_hardware(), "ai_model_configured":onnx_ready,
             "fsrcnn_available":fsrcnn_available(), "espcn_available":espcn_available(),
             "ffmpeg_available":bool(shutil.which("ffmpeg")), "presets":sorted(PRESETS), "lite_mode": True, "lite_max_output_pixels":LITE_MAX_PIXELS}
 
@@ -87,10 +91,13 @@ def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
     if device not in ("auto", "cpu", "gpu") or not 32 <= tile <= 512 or not 0 <= overlap <= 64 or overlap*2 >= tile:
         raise HTTPException(400, "Invalid device, tile or overlap")
     try:
-        path = model_path()
+        try:
+            path = model_path()
+            scale = configured_scale()
+        except ValueError as exc:
+            raise HTTPException(503, f"ONNX configuration invalid: {exc}") from exc
         if path is None:
             raise HTTPException(503, "ONNX model not configured")
-        scale = configured_scale()
         data = read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
             if image.width * image.height * scale * scale > LITE_MAX_PIXELS:
@@ -222,12 +229,18 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
                 raise HTTPException(422, "Invalid video dimensions or duration")
             except subprocess.TimeoutExpired:
                 raise HTTPException(422, "Video inspection timed out")
+            except OSError as exc:
+                raise HTTPException(503, "Video inspection tool could not start") from exc
             filters = {"auto":"eq=contrast=1.05:saturation=1.08,unsharp=3:3:0.4", "natural":"unsharp=3:3:0.3", "vivid":"eq=contrast=1.1:saturation=1.3", "restore":"hqdn3d=2:1.5:3:2,unsharp=3:3:0.3", "cinematic":"eq=contrast=1.16:saturation=1.1", "portrait":"hqdn3d=1:1:2:2,eq=contrast=1.03:saturation=1.02"}
             vf = filters[preset] + f",scale=iw*{scale}:ih*{scale}:flags=lanczos,pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuv420p"
             try:
                 subprocess.run(["ffmpeg","-threads","2","-filter_threads","2","-nostdin","-v","error","-y","-i",str(src),"-map","0:v:0","-map","0:a:0?","-vf",vf,"-c:v","libx264","-threads","2","-preset","veryfast","-crf","19","-c:a","aac","-movflags","+faststart",str(dst)],check=True,timeout=180,capture_output=True)
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
                 raise HTTPException(422,"Video processing failed or timed out")
+            except OSError as exc:
+                raise HTTPException(503, "Video processing tool could not start") from exc
+            if not dst.is_file() or dst.stat().st_size == 0:
+                raise HTTPException(422, "Video processing produced no output")
             if dst.stat().st_size > MAX_VIDEO_OUTPUT:
                 raise HTTPException(413, "Video output exceeds 100 MB")
             return Response(content=dst.read_bytes(),media_type="video/mp4",headers={"Content-Disposition":"attachment; filename=enhanced.mp4"})
