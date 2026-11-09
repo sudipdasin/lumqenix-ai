@@ -50,4 +50,11 @@ jobs:
             export LUMQENIX_FSRCNN_MODEL=/tmp/lumqenix-models/FSRCNN_x2.pb
             export LUMQENIX_ESPCN_MODEL=/tmp/lumqenix-models/ESPCN_x2.pb
           fi
-          python -m pytest -q tests
+          python -m pytest -q tests --junitxml=pytest-results.xml
+      - name: Upload pytest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-${{ matrix.python }}-neural-${{ matrix.neural }}
+          path: backend/pytest-results.xml
+          if-no-files-found: warn
