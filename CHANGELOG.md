@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.3.0-dev.7 — Upload reader resilience
+- Convert OSError when reading uploaded files into controlled HTTP 503 across API endpoints.
+- Add regression tests for unreadable uploads and exact/oversized upload limit boundaries.
+- **Verification:** three isolated upload-reader logic cases executed and passed; repository pytest and CI not yet verified.
+
 ## 0.3.0-dev.6 — Temporary video staging resilience
 - Catch filesystem errors while staging the uploaded video, return HTTP 503 and always release the single-job processing lock.
 - Add regression coverage for permission-denied staging, no FFmpeg subprocess launch, and lock recovery.
