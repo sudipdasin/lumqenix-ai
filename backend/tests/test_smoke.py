@@ -140,3 +140,29 @@ def test_video_oversize_rejected_before_transcode():
         result = client.post("/api/enhance/video", files={"file": ("large.mp4", b"test", "video/mp4")}, data={"scale":"2"})
     assert result.status_code == 413
     assert runner.call_count == 1
+
+def test_invalid_onnx_model_path_does_not_break_status(monkeypatch):
+    monkeypatch.setenv("LUMQENIX_ONNX_MODEL", "/nonexistent/model.onnx")
+    result = client.get("/api/status")
+    assert result.status_code == 200
+    assert result.json()["ai_model_configured"] is False
+
+def test_invalid_onnx_scale_does_not_break_status(monkeypatch, tmp_path):
+    model = tmp_path / "test.onnx"
+    model.write_bytes(b"placeholder")
+    monkeypatch.setenv("LUMQENIX_ONNX_MODEL", str(model))
+    monkeypatch.setenv("LUMQENIX_ONNX_SCALE", "garbage")
+    result = client.get("/api/status")
+    assert result.status_code == 200
+    assert result.json()["ai_model_configured"] is False
+
+def test_invalid_onnx_configuration_returns_503(monkeypatch):
+    monkeypatch.setenv("LUMQENIX_ONNX_MODEL", "/nonexistent/model.onnx")
+    result = client.post("/api/enhance/onnx", files={"file": ("small.png", png(), "image/png")})
+    assert result.status_code == 503
+    assert "configuration invalid" in result.json()["detail"]
+
+def test_onnx_unconfigured_returns_503(monkeypatch):
+    monkeypatch.delenv("LUMQENIX_ONNX_MODEL", raising=False)
+    result = client.post("/api/enhance/onnx", files={"file": ("small.png", png(), "image/png")})
+    assert result.status_code == 503
