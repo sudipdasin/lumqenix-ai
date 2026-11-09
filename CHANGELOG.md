@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.2.10 — Development build
+- Return HTTP 503 when ffprobe or ffmpeg cannot be launched after an initial availability check, instead of an uncaught server error.
+- Add regression tests for missing probe and encoder executables.
+- **Verification:** tests committed but passing CI and target-device measurements are not yet confirmed; not a release candidate.
+
 ## 0.2.9 — Development build
 - Catch Pillow decompression-bomb errors in image analysis, Classic, ONNX, FSRCNN and ESPCN paths, returning controlled HTTP 400 instead of server errors.
 - Add regression checks for decompression-bomb handling in image analysis, Classic, and ESPCN.
