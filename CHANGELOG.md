@@ -2,6 +2,10 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — MP4 output race safeguards
+- Reject enhanced video that becomes empty after the initial filesystem size check; add a regression test for empty post-stat reads.
+- Three isolated MP4 size/empty-output logic checks passed locally; full repository pytest and the new regression tests remain unverified.
+
 ## Unreleased — MP4 output size race safeguard
 - Recheck enhanced MP4 byte length after reading, preventing a file that grows between stat and read from bypassing the response-size limit.
 - Add regression test simulating a small stat size but oversized read result.
