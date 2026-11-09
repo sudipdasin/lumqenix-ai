@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Dependency verification
+- Run `python -m pip check` in each GitHub Actions CPU smoke matrix job after installing dependencies, so incompatible installed distributions fail before the test suite.
+- GitHub commit status and pull-request workflow-run queries returned no checks for the prior development head; those queries do not establish that push-triggered CI has or has not run.
+- **Verification:** workflow change committed; execution of the updated CI matrix is not confirmed.
+
 ## Unreleased — MP4 output race safeguards
 - Reject enhanced video that becomes empty after the initial filesystem size check; add a regression test for empty post-stat reads.
 - Three isolated MP4 size/empty-output logic checks passed locally; full repository pytest and the new regression tests remain unverified.
