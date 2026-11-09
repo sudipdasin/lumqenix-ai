@@ -204,12 +204,16 @@ def _process_video(data: bytes, preset: str, scale: int):
             raise HTTPException(422, "Invalid video dimensions")
         except subprocess.TimeoutExpired:
             raise HTTPException(422, "Video inspection timed out")
+        except OSError as exc:
+            raise HTTPException(503, "Video inspection tool could not start") from exc
         filters = {"auto":"eq=contrast=1.05:saturation=1.08,unsharp=3:3:0.4", "natural":"unsharp=3:3:0.3", "vivid":"eq=contrast=1.1:saturation=1.3", "restore":"hqdn3d=2:1.5:3:2,unsharp=3:3:0.3", "cinematic":"eq=contrast=1.16:saturation=1.1", "portrait":"hqdn3d=1:1:2:2,eq=contrast=1.03:saturation=1.02"}
         vf = filters[preset] + f",scale=iw*{scale}:ih*{scale}:flags=lanczos,format=yuv420p"
         try:
             subprocess.run(["ffmpeg","-threads","2","-filter_threads","2","-nostdin","-v","error","-y","-i",str(src),"-vf",vf,"-c:v","libx264","-preset","veryfast","-crf","19","-c:a","aac","-movflags","+faststart",str(dst)],check=True,timeout=180,capture_output=True)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
             raise HTTPException(422, "Video processing failed or timed out")
+        except OSError as exc:
+            raise HTTPException(503, "Video processing tool could not start") from exc
         if not dst.is_file() or dst.stat().st_size == 0:
             raise HTTPException(422, "Video processing produced no output")
         return Response(content=dst.read_bytes(),media_type="video/mp4",headers={"Content-Disposition":"attachment; filename=enhanced.mp4"})
