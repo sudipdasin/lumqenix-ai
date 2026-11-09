@@ -176,3 +176,22 @@ def test_upload_limit_boundary(monkeypatch):
         assert exc.status_code == 413
     else:
         raise AssertionError("Expected HTTP 413 for oversized upload")
+
+def test_video_output_cap_rechecked_after_read(monkeypatch):
+    from app import main
+    def runner(args, **kwargs):
+        if args[0] == "ffprobe":
+            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+        Path(args[-1]).write_bytes(b"ok")
+        return CompletedProcess(args, 0, b"", b"")
+    original_read = Path.read_bytes
+    def enlarged_read(path):
+        if path.name == "enhanced.mp4":
+            return b"larger-than-stat"
+        return original_read(path)
+    monkeypatch.setattr(main, "MAX_VIDEO_OUTPUT", 4)
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ), patch.object(Path, "read_bytes", enlarged_read):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 413
