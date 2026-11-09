@@ -237,3 +237,34 @@ def test_video_encoder_executable_missing_returns_503():
         result = client.post("/api/enhance/video", files={"file": ("clip.mp4", b"sample", "video/mp4")})
     assert result.status_code == 503
     assert "processing tool" in result.json()["detail"]
+
+def test_video_output_over_limit_rejected_before_read(monkeypatch):
+    from subprocess import CompletedProcess
+    from app import main
+    def fake_run(args, **kwargs):
+        if args[0] == "ffprobe":
+            return CompletedProcess(args, 0, "64,48\\n", "")
+        destination = __import__("pathlib").Path(args[-1])
+        destination.write_bytes(b"small")
+        return CompletedProcess(args, 0, b"", b"")
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=fake_run
+    ), patch.object(main, "MAX_VIDEO_OUTPUT", 4):
+        result = client.post("/api/enhance/video", files={"file": ("clip.mp4", b"sample", "video/mp4")})
+    assert result.status_code == 413
+    assert "output limit" in result.json()["detail"]
+
+def test_video_output_under_limit_returns_mp4():
+    from subprocess import CompletedProcess
+    def fake_run(args, **kwargs):
+        if args[0] == "ffprobe":
+            return CompletedProcess(args, 0, "64,48\\n", "")
+        __import__("pathlib").Path(args[-1]).write_bytes(b"mock-mp4")
+        return CompletedProcess(args, 0, b"", b"")
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=fake_run
+    ):
+        result = client.post("/api/enhance/video", files={"file": ("clip.mp4", b"sample", "video/mp4")})
+    assert result.status_code == 200
+    assert result.content == b"mock-mp4"
+    assert result.headers["content-type"].startswith("video/mp4")
