@@ -2,6 +2,12 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.2.5 — Development build
+- Validate ONNX model path and scale in API readiness instead of assuming an environment variable means a usable model.
+- Return HTTP 503 for invalid ONNX configuration, avoiding an internal-server error.
+- Add regression tests for missing/invalid model paths and invalid scale.
+- **Verification:** tests committed but execution and target-device testing remain unconfirmed; not a release candidate.
+
 ## 0.2.4 — Development build
 - Reject empty video uploads with a clear 400 response.
 - Reject missing or empty transcoder output rather than returning an invalid MP4.
