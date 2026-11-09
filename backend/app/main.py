@@ -254,6 +254,8 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
                 if output_size > MAX_VIDEO_OUTPUT:
                     raise HTTPException(413, "Video output exceeds 100 MB")
                 video_bytes = dst.read_bytes()
+                if not video_bytes:
+                    raise HTTPException(422, "Video processing produced no output")
                 if len(video_bytes) > MAX_VIDEO_OUTPUT:
                     raise HTTPException(413, "Video output exceeds 100 MB")
             except FileNotFoundError as exc:
