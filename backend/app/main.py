@@ -241,10 +241,17 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
                 raise HTTPException(422,"Video processing failed or timed out")
             except OSError as exc:
                 raise HTTPException(503, "Video processing tool could not start") from exc
-            if not dst.is_file() or dst.stat().st_size == 0:
-                raise HTTPException(422, "Video processing produced no output")
-            if dst.stat().st_size > MAX_VIDEO_OUTPUT:
-                raise HTTPException(413, "Video output exceeds 100 MB")
-            return Response(content=dst.read_bytes(),media_type="video/mp4",headers={"Content-Disposition":"attachment; filename=enhanced.mp4"})
+            try:
+                output_size = dst.stat().st_size
+                if output_size == 0:
+                    raise HTTPException(422, "Video processing produced no output")
+                if output_size > MAX_VIDEO_OUTPUT:
+                    raise HTTPException(413, "Video output exceeds 100 MB")
+                video_bytes = dst.read_bytes()
+            except FileNotFoundError as exc:
+                raise HTTPException(422, "Video processing produced no output") from exc
+            except OSError as exc:
+                raise HTTPException(503, "Enhanced video could not be read") from exc
+            return Response(content=video_bytes,media_type="video/mp4",headers={"Content-Disposition":"attachment; filename=enhanced.mp4"})
     finally:
         PROCESSING_LOCK.release()
