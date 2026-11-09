@@ -205,7 +205,10 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
     try:
         with tempfile.TemporaryDirectory() as tmp:
             src, dst = Path(tmp)/"source", Path(tmp)/"enhanced.mp4"
-            src.write_bytes(data)
+            try:
+                src.write_bytes(data)
+            except OSError as exc:
+                raise HTTPException(503, "Video staging failed") from exc
             try:
                 probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0",
                                         "-show_entries", "stream=width,height,duration:format=duration",
