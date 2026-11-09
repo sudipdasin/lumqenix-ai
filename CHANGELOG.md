@@ -2,6 +2,12 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.2.11 — Development build
+- Cap enhanced MP4 output at 100 MB before loading response bytes into memory; oversized outputs return HTTP 413.
+- Add mock-FFmpeg regression tests for output cap and successful MP4 responses.
+- Independently compare reproduced Classic preset operations on a deterministic synthetic 320x240 image; this is not a repository-wide test or pretrained-model benchmark.
+- **Verification:** full GitHub test suite, real neural weights, and target 4 GB device remain unverified; not a release candidate.
+
 ## 0.2.10 — Development build
 - Return HTTP 503 when ffprobe or ffmpeg cannot be launched after an initial availability check, instead of an uncaught server error.
 - Add regression tests for missing probe and encoder executables.
