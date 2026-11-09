@@ -216,3 +216,24 @@ def test_neural_rejects_decompression_bomb_without_server_error(monkeypatch):
     with patch("app.main.espcn_available", return_value=True):
         result = client.post("/api/enhance/espcn", files={"file": ("bomb.png", payload, "image/png")})
     assert result.status_code == 400
+
+def test_video_probe_executable_missing_returns_503():
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffprobe"), patch(
+        "app.main.subprocess.run", side_effect=FileNotFoundError("ffprobe")
+    ):
+        result = client.post("/api/enhance/video", files={"file": ("clip.mp4", b"sample", "video/mp4")})
+    assert result.status_code == 503
+    assert "inspection tool" in result.json()["detail"]
+
+def test_video_encoder_executable_missing_returns_503():
+    from subprocess import CompletedProcess
+    def fake_run(args, **kwargs):
+        if args[0] == "ffprobe":
+            return CompletedProcess(args, 0, "64,48\n", "")
+        raise FileNotFoundError("ffmpeg")
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=fake_run
+    ):
+        result = client.post("/api/enhance/video", files={"file": ("clip.mp4", b"sample", "video/mp4")})
+    assert result.status_code == 503
+    assert "processing tool" in result.json()["detail"]
