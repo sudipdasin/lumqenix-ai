@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.2.6 — Development build
+- Hold the global processing lock throughout video probing, encoding, and reading the completed output, preventing overlapping CPU-intensive jobs.
+- Add concurrency and lock-release regression tests for video processing.
+- **Verification:** tests committed; CI and real-device execution not yet confirmed. Not a release candidate.
+
 ## 0.2.5 — Development build
 - Validate ONNX model path and scale in API readiness instead of assuming an environment variable means a usable model.
 - Return HTTP 503 for invalid ONNX configuration, avoiding an internal-server error.
