@@ -2,6 +2,10 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.2.8 — Development build
+- Expand GitHub Actions CPU smoke-test triggers to development branches and manual dispatch, rather than main pushes only.
+- **Verification:** CI execution still requires checking actual workflow runs; not a release candidate.
+
 ## 0.2.7 — Development build
 - Replace base OpenCV headless dependency with OpenCV contrib headless so FSRCNN/ESPCN `dnn_superres` can actually be imported in a fresh install.
 - Add dependency and classic output-limit regression checks.
