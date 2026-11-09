@@ -178,6 +178,16 @@ async def enhance_video(file: UploadFile = File(...), preset: str = Form("auto")
     data = await read_limited(file)
     if not data:
         raise HTTPException(400, "Empty video upload")
+    if not PROCESSING_LOCK.acquire(blocking=False):
+        raise HTTPException(429, "Another job is processing; try again shortly")
+    try:
+        return _process_video(data, preset, scale)
+    finally:
+        PROCESSING_LOCK.release()
+
+
+def _process_video(data: bytes, preset: str, scale: int):
+    """Keep the global job lock during probing, encoding, and output reading."""
     with tempfile.TemporaryDirectory() as tmp:
         src, dst = Path(tmp)/"source", Path(tmp)/"enhanced.mp4"
         src.write_bytes(data)
@@ -196,12 +206,10 @@ async def enhance_video(file: UploadFile = File(...), preset: str = Form("auto")
             raise HTTPException(422, "Video inspection timed out")
         filters = {"auto":"eq=contrast=1.05:saturation=1.08,unsharp=3:3:0.4", "natural":"unsharp=3:3:0.3", "vivid":"eq=contrast=1.1:saturation=1.3", "restore":"hqdn3d=2:1.5:3:2,unsharp=3:3:0.3", "cinematic":"eq=contrast=1.16:saturation=1.1", "portrait":"hqdn3d=1:1:2:2,eq=contrast=1.03:saturation=1.02"}
         vf = filters[preset] + f",scale=iw*{scale}:ih*{scale}:flags=lanczos,format=yuv420p"
-        if not PROCESSING_LOCK.acquire(blocking=False): raise HTTPException(429, "Another job is processing; try again shortly")
         try:
             subprocess.run(["ffmpeg","-threads","2","-filter_threads","2","-nostdin","-v","error","-y","-i",str(src),"-vf",vf,"-c:v","libx264","-preset","veryfast","-crf","19","-c:a","aac","-movflags","+faststart",str(dst)],check=True,timeout=180,capture_output=True)
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired): raise HTTPException(422,"Video processing failed or timed out")
-        finally:
-            PROCESSING_LOCK.release()
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            raise HTTPException(422, "Video processing failed or timed out")
         if not dst.is_file() or dst.stat().st_size == 0:
             raise HTTPException(422, "Video processing produced no output")
         return Response(content=dst.read_bytes(),media_type="video/mp4",headers={"Content-Disposition":"attachment; filename=enhanced.mp4"})
