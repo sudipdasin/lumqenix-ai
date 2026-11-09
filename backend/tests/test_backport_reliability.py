@@ -111,3 +111,28 @@ def test_encoded_video_read_failure_returns_503():
         response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
     assert response.status_code == 503
     assert "could not be read" in response.json()["detail"]
+
+def test_video_lock_released_after_encoder_failure():
+    from app.main import PROCESSING_LOCK
+    def runner(args, **kwargs):
+        if args[0] == "ffprobe":
+            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+        raise FileNotFoundError("ffmpeg")
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 503
+    assert not PROCESSING_LOCK.locked()
+
+def test_video_missing_after_encoder_returns_422():
+    def runner(args, **kwargs):
+        if args[0] == "ffprobe":
+            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+        return CompletedProcess(args, 0, b"", b"")
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 422
+    assert "produced no output" in response.json()["detail"]
