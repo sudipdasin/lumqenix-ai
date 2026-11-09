@@ -28,7 +28,11 @@ Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
 @app.get("/api/status")
 def status():
-    return {"status":"ok", "version": VERSION, "hardware":detect_hardware(), "ai_model_configured":bool(__import__("os").getenv("LUMQENIX_ONNX_MODEL")),
+    try:
+        onnx_ready = model_path() is not None and configured_scale() in (2, 4)
+    except ValueError:
+        onnx_ready = False
+    return {"status":"ok", "version": VERSION, "hardware":detect_hardware(), "ai_model_configured":onnx_ready,
             "fsrcnn_available":fsrcnn_available(), "espcn_available":espcn_available(),
             "ffmpeg_available":bool(shutil.which("ffmpeg")), "presets":sorted(PRESETS), "lite_mode": True, "lite_max_output_pixels":LITE_MAX_PIXELS}
 
@@ -75,10 +79,13 @@ async def enhance_onnx(file: UploadFile = File(...), device: str = Form("auto"),
     if device not in ("auto", "cpu", "gpu") or not 32 <= tile <= 512 or not 0 <= overlap <= 64 or overlap*2 >= tile:
         raise HTTPException(400, "Invalid device, tile or overlap")
     try:
-        path = model_path()
+        try:
+            path = model_path()
+            scale = configured_scale()
+        except ValueError as exc:
+            raise HTTPException(503, f"ONNX configuration invalid: {exc}") from exc
         if path is None:
             raise HTTPException(503, "ONNX model not configured")
-        scale = configured_scale()
         data = await read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
             if image.width * image.height * scale * scale > LITE_MAX_PIXELS:
