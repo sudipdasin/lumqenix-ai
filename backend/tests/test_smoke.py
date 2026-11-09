@@ -197,3 +197,22 @@ def test_opencv_contrib_super_resolution_module_installed():
 def test_classic_rejects_oversized_output():
     result = client.post("/api/enhance/image", files={"file": ("large.png", png(2000, 1600), "image/png")}, data={"scale": "2"})
     assert result.status_code == 413
+
+def test_analyze_rejects_decompression_bomb_without_server_error(monkeypatch):
+    payload = png()
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 1)
+    result = client.post("/api/analyze", files={"file": ("bomb.png", payload, "image/png")})
+    assert result.status_code == 400
+
+def test_classic_rejects_decompression_bomb_without_server_error(monkeypatch):
+    payload = png()
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 1)
+    result = client.post("/api/enhance/image", files={"file": ("bomb.png", payload, "image/png")})
+    assert result.status_code == 400
+
+def test_neural_rejects_decompression_bomb_without_server_error(monkeypatch):
+    payload = png()
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 1)
+    with patch("app.main.espcn_available", return_value=True):
+        result = client.post("/api/enhance/espcn", files={"file": ("bomb.png", payload, "image/png")})
+    assert result.status_code == 400
