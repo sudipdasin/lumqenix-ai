@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## 0.3.0-dev.4 — Encoded video read resilience
+- Convert missing output files to HTTP 422 and unreadable encoded video output to HTTP 503, without exposing a server traceback.
+- Add a regression test simulating permission-denied output reads after successful FFmpeg execution.
+- **Verification:** committed but new test and CI remain unverified; not a release candidate.
+
 ## 0.3.0-dev.3 — Video input and output boundary coverage
 - Reject empty video uploads with HTTP 400 before acquiring the processing lock or launching FFmpeg.
 - Add three regression tests for empty uploads, oversized enhanced MP4 responses and output exactly at the configured size limit.
