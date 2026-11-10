@@ -47,7 +47,7 @@ def brand():
 def read_limited(file: UploadFile):
     try:
         content = file.file.read(MAX_UPLOAD + 1)
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
         raise HTTPException(503, "Uploaded file could not be read") from exc
     if len(content) > MAX_UPLOAD: raise HTTPException(413, "File exceeds 50 MB")
     return content
