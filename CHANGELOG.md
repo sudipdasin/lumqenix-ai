@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Closed upload stream handling
+- Convert closed upload stream read failures (`ValueError`) to HTTP 503.
+- Add regression coverage for closed in-memory upload streams.
+- **Verification:** test added but not executed; no version advancement.
+
 ## Unreleased — Video inspection regression coverage
 - Add three tests for ffprobe timeouts, malformed metadata, and videos exceeding the 60-second Lite duration limit.
 - Assert inspection failures release the processing lock and do not invoke FFmpeg encoding.
