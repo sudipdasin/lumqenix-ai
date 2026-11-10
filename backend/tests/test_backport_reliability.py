@@ -213,3 +213,30 @@ def test_video_output_empty_after_stat_returns_422():
         response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
     assert response.status_code == 422
     assert "produced no output" in response.json()["detail"]
+
+def test_ffprobe_timeout_returns_422_and_releases_lock():
+    from app.main import PROCESSING_LOCK
+    from subprocess import TimeoutExpired
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffprobe"), patch(
+        "app.main.subprocess.run", side_effect=TimeoutExpired("ffprobe", 20)
+    ):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 422
+    assert "timed out" in response.json()["detail"]
+    assert not PROCESSING_LOCK.locked()
+
+def test_invalid_ffprobe_metadata_returns_422_without_encoding():
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", return_value=CompletedProcess(["ffprobe"], 0, '{"streams":[]}', "")
+    ) as run:
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 422
+    assert run.call_count == 1
+
+def test_video_duration_over_limit_returns_413_without_encoding():
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", return_value=CompletedProcess(["ffprobe"], 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"61"}}', "")
+    ) as run:
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 413
+    assert run.call_count == 1
