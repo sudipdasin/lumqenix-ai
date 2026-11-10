@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Video inspection regression coverage
+- Add three tests for ffprobe timeouts, malformed metadata, and videos exceeding the 60-second Lite duration limit.
+- Assert inspection failures release the processing lock and do not invoke FFmpeg encoding.
+- **Verification:** tests committed, not executed in this session; development version remains 0.3.0-dev.7.
+
 ## Unreleased — Dependency verification
 - Run `python -m pip check` in each GitHub Actions CPU smoke matrix job after installing dependencies, so incompatible installed distributions fail before the test suite.
 - GitHub commit status and pull-request workflow-run queries returned no checks for the prior development head; those queries do not establish that push-triggered CI has or has not run.
