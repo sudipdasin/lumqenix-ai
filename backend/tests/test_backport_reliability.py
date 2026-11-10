@@ -240,3 +240,17 @@ def test_video_duration_over_limit_returns_413_without_encoding():
         response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
     assert response.status_code == 413
     assert run.call_count == 1
+
+def test_closed_upload_stream_returns_503():
+    from app.main import read_limited
+    from fastapi import HTTPException
+    from types import SimpleNamespace
+    stream = io.BytesIO(b"payload")
+    stream.close()
+    try:
+        read_limited(SimpleNamespace(file=stream))
+    except HTTPException as exc:
+        assert exc.status_code == 503
+        assert exc.detail == "Uploaded file could not be read"
+    else:
+        raise AssertionError("Expected HTTP 503 for a closed upload stream")
