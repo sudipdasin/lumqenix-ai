@@ -2,6 +2,10 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — FFprobe failure regression coverage
+- Add tests for non-finite video duration and nonzero ffprobe exit status; both must reject the upload before encoding.
+- **Verification:** tests committed but not executed in this run; no version milestone advancement.
+
 ## Unreleased — Closed upload stream handling
 - Convert closed upload stream read failures (`ValueError`) to HTTP 503.
 - Add regression coverage for closed in-memory upload streams.
