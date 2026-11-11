@@ -254,3 +254,24 @@ def test_closed_upload_stream_returns_503():
         assert exc.detail == "Uploaded file could not be read"
     else:
         raise AssertionError("Expected HTTP 503 for a closed upload stream")
+
+def test_nonfinite_video_duration_rejected_without_encoding():
+    """NaN duration from ffprobe must not reach the encoder."""
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run",
+        return_value=CompletedProcess(["ffprobe"], 0,
+            '{"streams":[{"width":32,"height":24}],"format":{"duration":"NaN"}}', "")
+    ) as run:
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 422
+    assert run.call_count == 1
+
+def test_ffprobe_nonzero_exit_rejected_without_encoding():
+    """Malformed videos should not trigger an encoding attempt."""
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run",
+        return_value=CompletedProcess(["ffprobe"], 1, "", "invalid input")
+    ) as run:
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 422
+    assert run.call_count == 1
