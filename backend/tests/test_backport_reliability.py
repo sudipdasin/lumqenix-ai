@@ -275,3 +275,25 @@ def test_ffprobe_nonzero_exit_rejected_without_encoding():
         response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
     assert response.status_code == 422
     assert run.call_count == 1
+
+def test_upload_stream_nonbytes_result_returns_503():
+    """Broken upload streams must not turn into uncaught TypeError or bad data."""
+    from types import SimpleNamespace
+    from fastapi import HTTPException
+    from app.main import read_limited
+
+    class InvalidStream:
+        def __init__(self, value):
+            self.value = value
+
+        def read(self, size):
+            return self.value
+
+    for value in (None, "not binary", bytearray(b"binary-like")):
+        try:
+            read_limited(SimpleNamespace(file=InvalidStream(value)))
+        except HTTPException as exc:
+            assert exc.status_code == 503
+            assert exc.detail == "Uploaded file could not be read"
+        else:
+            raise AssertionError(f"Expected HTTP 503 for {type(value).__name__}")
