@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Malformed upload stream resilience (2026-11-13)
+- Reject upload stream reads returning non-bytes (including `None`, text, or mutable byte arrays) with HTTP 503 instead of uncaught exceptions or invalid payloads.
+- Add regression coverage for three malformed stream return types.
+- **Verification:** five isolated upload-reader cases executed successfully in a standalone Python harness; repository pytest and CI not confirmed. Version remains 0.3.0-dev.7.
+
 ## Unreleased — FFprobe failure regression coverage
 - Add tests for non-finite video duration and nonzero ffprobe exit status; both must reject the upload before encoding.
 - **Verification:** tests committed but not executed in this run; no version milestone advancement.
