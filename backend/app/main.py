@@ -49,6 +49,8 @@ def read_limited(file: UploadFile):
         content = file.file.read(MAX_UPLOAD + 1)
     except (OSError, ValueError) as exc:
         raise HTTPException(503, "Uploaded file could not be read") from exc
+    if not isinstance(content, bytes):
+        raise HTTPException(503, "Uploaded file could not be read")
     if len(content) > MAX_UPLOAD: raise HTTPException(413, "File exceeds 50 MB")
     return content
 
