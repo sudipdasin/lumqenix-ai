@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Bounded enhanced-video reads (2026-11-14)
+- Replace unrestricted `Path.read_bytes()` with a bounded binary read of at most `MAX_VIDEO_OUTPUT + 1` bytes, limiting transient allocation when an MP4 grows after the initial size check.
+- Preserve HTTP 413 for oversized outputs and HTTP 422 for empty outputs; adapt the existing growth/empty-read regression tests and add an explicit bounded-read-size test.
+- **Verification:** source and test changes committed; full pytest and CI not verified. GitHub combined statuses and PR-triggered workflow query returned no records for the new commit; this does not rule out push-triggered workflows. Version remains `0.3.0-dev.7`.
+
 ## Unreleased — Malformed upload stream resilience (2026-11-13)
 - Reject upload stream reads returning non-bytes (including `None`, text, or mutable byte arrays) with HTTP 503 instead of uncaught exceptions or invalid payloads.
 - Add regression coverage for three malformed stream return types.
