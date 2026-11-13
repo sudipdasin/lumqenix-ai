@@ -301,7 +301,6 @@ def test_upload_stream_nonbytes_result_returns_503():
 def test_video_output_read_is_bounded_after_stat(monkeypatch):
     """The MP4 reader must request at most limit+1 bytes, not read the whole file."""
     from app import main
-    from unittest.mock import Mock
     def runner(args, **kwargs):
         if args[0] == "ffprobe":
             return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
