@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Repair bounded-reader regression coverage (2026-11-15)
+- Update the encoded-video permission-error regression to patch `Path.open('rb')`, matching the current bounded stream reader instead of the obsolete `Path.read_bytes()` path.
+- This fixes a test that would otherwise exercise the successful read path and fail its HTTP 503 assertion.
+- **Verification:** static source inspection confirms the mismatch and replacement; pytest and real-model benchmarks were not executed in this run. No version promotion.
+
 ## Unreleased — Bounded enhanced-video reads (2026-11-14)
 - Replace unrestricted `Path.read_bytes()` with a bounded binary read of at most `MAX_VIDEO_OUTPUT + 1` bytes, limiting transient allocation when an MP4 grows after the initial size check.
 - Preserve HTTP 413 for oversized outputs and HTTP 422 for empty outputs; adapt the existing growth/empty-read regression tests and add an explicit bounded-read-size test.
