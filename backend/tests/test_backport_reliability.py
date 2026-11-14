@@ -100,14 +100,14 @@ def test_encoded_video_read_failure_returns_503():
             return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
         Path(args[-1]).write_bytes(b"mp4data")
         return CompletedProcess(args, 0, b"", b"")
-    original_read = Path.read_bytes
-    def read_with_failure(path):
-        if path.name == "enhanced.mp4":
+    original_open = Path.open
+    def open_with_failure(path, *args, **kwargs):
+        if path.name == "enhanced.mp4" and args and args[0] == "rb":
             raise PermissionError("cannot read encoded video")
-        return original_read(path)
+        return original_open(path, *args, **kwargs)
     with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
         "app.main.subprocess.run", side_effect=runner
-    ), patch.object(Path, "read_bytes", read_with_failure):
+    ), patch.object(Path, "open", open_with_failure):
         response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
     assert response.status_code == 503
     assert "could not be read" in response.json()["detail"]
