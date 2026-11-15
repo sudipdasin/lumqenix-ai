@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Real FFmpeg integration coverage (2026-11-16)
+- Add an end-to-end generated-video test that runs actual FFmpeg and FFprobe, exercises the HTTP enhancement endpoint, and checks the encoded MP4 output dimensions.
+- Skip only if FFmpeg/FFprobe or libx264 are unavailable; no pretrained-model or portrait-quality claim is implied by this test.
+- **Verification:** committed; CI execution of this new test is pending. The preceding commit c1a949a passed all four CPU CI jobs (Python 3.10/3.12, with/without neural dependencies); the Python 3.12 neural job reported 125 passed, 2 skipped, 1 warning.
+
 ## Unreleased — Temporary-directory creation failure
 - Convert video temporary-directory creation OSError into HTTP 503 rather than an uncaught server exception.
 - Add a regression test asserting lock release and no subprocess launch on temporary-directory creation failure.
