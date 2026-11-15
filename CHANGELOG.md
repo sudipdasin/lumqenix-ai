@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Temporary-directory creation failure
+- Convert video temporary-directory creation OSError into HTTP 503 rather than an uncaught server exception.
+- Add a regression test asserting lock release and no subprocess launch on temporary-directory creation failure.
+- **Verification:** committed, full repository test suite not run in this session.
+
 ## Unreleased — Repair bounded-reader regression coverage (2026-11-15)
 - Update the encoded-video permission-error regression to patch `Path.open('rb')`, matching the current bounded stream reader instead of the obsolete `Path.read_bytes()` path.
 - This fixes a test that would otherwise exercise the successful read path and fail its HTTP 503 assertion.
