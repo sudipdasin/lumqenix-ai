@@ -321,3 +321,15 @@ def test_video_output_read_is_bounded_after_stat(monkeypatch):
     ), patch.object(Path, "open", bounded_open):
         response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
     assert response.status_code == 413
+
+def test_video_temp_directory_creation_failure_returns_503_and_unlocks():
+    """Temporary disk exhaustion must not leave the processing lock held."""
+    from app.main import PROCESSING_LOCK
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.tempfile.TemporaryDirectory", side_effect=OSError("no space left")
+    ), patch("app.main.subprocess.run") as run:
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 503
+    assert "temporary directory unavailable" in response.json()["detail"]
+    assert not PROCESSING_LOCK.locked()
+    run.assert_not_called()
