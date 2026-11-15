@@ -208,7 +208,11 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
     if not PROCESSING_LOCK.acquire(blocking=False):
         raise HTTPException(429, "Another job is processing; try again shortly")
     try:
-        with tempfile.TemporaryDirectory() as tmp:
+        try:
+            temp_dir = tempfile.TemporaryDirectory()
+        except OSError as exc:
+            raise HTTPException(503, "Video temporary directory unavailable") from exc
+        with temp_dir as tmp:
             src, dst = Path(tmp)/"source", Path(tmp)/"enhanced.mp4"
             try:
                 src.write_bytes(data)
