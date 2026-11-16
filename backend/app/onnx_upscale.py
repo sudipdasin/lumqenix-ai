@@ -99,9 +99,14 @@ def upscale(image, device="auto", tile=128, overlap=16):
                 raise ValueError(f"Model output {result.shape} does not match expected {expected}")
             if not np.isfinite(result).all():
                 raise RuntimeError("ONNX model returned non-finite pixels")
-            rgb = np.clip(result[0].transpose(1,2,0)*255.0,0,255).astype(np.uint8)
             core_y0, core_x0 = (y-y0)*scale, (x-x0)*scale
             core_h, core_w = min(tile,h-y)*scale, min(tile,w-x)*scale
-            output[y*scale:y*scale+core_h, x*scale:x*scale+core_w] = rgb[
-                core_y0:core_y0+core_h,core_x0:core_x0+core_w]
+            # Only convert the central region. The halo is inference context,
+            # never output; converting it creates avoidable float32/uint8
+            # intermediates on memory-constrained CPU systems.
+            core = result[0, :, core_y0:core_y0+core_h,
+                          core_x0:core_x0+core_w].transpose(1, 2, 0)
+            output[y*scale:y*scale+core_h, x*scale:x*scale+core_w] = (
+                np.clip(core * 255.0, 0, 255).astype(np.uint8)
+            )
     return Image.fromarray(output, "RGB"), actual
