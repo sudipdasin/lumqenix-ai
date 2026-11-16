@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Repair quality benchmark imports (2026-11-17)
+- Fix pytest collection of `scripts.benchmark_quality_models` by using package-relative imports when imported as a module while retaining direct CLI script execution imports.
+- Root cause: GitHub Actions run 43968060998 failed in five test/video jobs with `ModuleNotFoundError: No module named 'benchmark_models'`; the frontend and CPU image benchmark lanes succeeded.
+- **Verification:** GitHub Actions failure logs inspected; fix committed, new CI execution pending. No version promotion.
+
 ## Unreleased — Real pretrained CPU benchmark CI evidence (2026-11-17)
 - Extend the existing Python 3.12 neural CI matrix job (without adding an eighth job) to run both downloaded pretrained FSRCNN and ESPCN weights on deterministic 128×128 textured input in separate CPU processes.
 - Validate model SHA256 presence, exact 2× output dimensions, two positive warm timings, and measured process peak RSS below 4 GiB; upload a machine-readable JSON artifact even when validation fails.
