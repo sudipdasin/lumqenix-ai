@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Restore real-video CI prerequisites (2026-11-17)
+- GitHub Actions run 43943712224 failed in four test-matrix jobs and the FFmpeg integration job at the H.264 encoder prerequisite, while frontend and CPU benchmark jobs passed.
+- Explicitly install `ffmpeg` and `libavcodec-extra` before prerequisite checks in those five jobs; print the encoder list for diagnostics if the host image still lacks `libx264`.
+- **Verification:** workflow change committed; subsequent CI result pending. No version promotion or claim of passing real-video tests.
+
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
 ## Unreleased — CPU benchmark acceptance gate (2026-11-17)
