@@ -12,6 +12,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Paired-image objective quality evaluation (2026-11-17)
+- Introduce `backend/scripts/evaluate_quality.py` for reproducible full-reference RGB MSE, MAE and PSNR measurement, optional bicubic-baseline comparison, and JSON output. Lossless comparisons use a null PSNR rather than invalid JSON infinity.
+- Add four numerical regression tests: identical images, known PSNR, dimension mismatch, and baseline improvement arithmetic.
+- This is an evaluation foundation, **not** evidence of perceptual enhancement or facial identity preservation. Model-generated paired-image benchmarks and complete CI results remain pending.
+
 ## Unreleased — ONNX core-only halo conversion (2026-11-17)
 - Optimize tiled ONNX super-resolution to convert only each tile's central output region from float32 NCHW to uint8 RGB. Halo pixels remain inference context and are no longer converted unnecessarily.
 - Add three exact-pixel reference regressions for the optimized path, including irregular dimensions and overlap variants.
