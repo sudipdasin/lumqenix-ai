@@ -333,3 +333,18 @@ def test_video_temp_directory_creation_failure_returns_503_and_unlocks():
     assert "temporary directory unavailable" in response.json()["detail"]
     assert not PROCESSING_LOCK.locked()
     run.assert_not_called()
+
+def test_status_requires_both_video_tools():
+    """Do not advertise usable video mode when FFprobe is missing."""
+    def only_ffmpeg(name):
+        return "/usr/bin/ffmpeg" if name == "ffmpeg" else None
+    with patch("app.main.shutil.which", side_effect=only_ffmpeg):
+        response = client.get("/api/status")
+    assert response.status_code == 200
+    assert response.json()["ffmpeg_available"] is False
+
+def test_status_reports_video_tools_when_both_exist():
+    with patch("app.main.shutil.which", return_value="/usr/bin/tool"):
+        response = client.get("/api/status")
+    assert response.status_code == 200
+    assert response.json()["ffmpeg_available"] is True
