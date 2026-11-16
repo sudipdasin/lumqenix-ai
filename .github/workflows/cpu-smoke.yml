@@ -122,6 +122,22 @@ jobs:
         run: python -m pip install -r requirements.txt httpx
       - name: Measure real CPU endpoint and peak process RSS
         run: python scripts/benchmark_api_cpu.py --width 256 --height 256 --runs 3 --scale 2 > cpu-benchmark.json
+      - name: Validate benchmark measurements and Lite memory budget
+        run: |
+          python - <<'PY'
+          import json
+          import math
+          from pathlib import Path
+          result = json.loads(Path("cpu-benchmark.json").read_text())
+          assert result["input_pixels"] == 256 * 256
+          assert result["output_pixels"] == 512 * 512
+          assert result["warm_runs"] == 3
+          assert result["encoded_png_bytes"] > 0
+          for key in ("warm_seconds_median", "warm_seconds_min", "warm_seconds_max", "peak_process_rss_mib"):
+              assert math.isfinite(result[key]) and result[key] > 0, (key, result[key])
+          assert result["warm_seconds_min"] <= result["warm_seconds_median"] <= result["warm_seconds_max"]
+          assert result["peak_process_rss_mib"] < 4096, "Process exceeded 4 GiB memory budget"
+          PY
       - name: Show benchmark results
         run: cat cpu-benchmark.json
       - name: Upload machine-readable benchmark
