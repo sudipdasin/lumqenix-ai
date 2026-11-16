@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — CPU benchmark acceptance gate (2026-11-17)
+- Validate JSON benchmark shape, output dimensions, successful PNG encoding, finite positive latency measurements, and consistent latency ordering in the CPU benchmark CI job.
+- Fail the benchmark job if measured peak process RSS reaches 4 GiB. This is a smoke budget on GitHub-hosted Linux, not proof of 4 GB laptop compatibility or a real-model quality threshold.
+- **Verification:** checks committed; new CI outcome pending.
+
 ## Unreleased — Automated CPU benchmark CI lane (2026-11-17)
 - Add a seventh independent GitHub Actions job that installs the backend, executes the deterministic image API CPU benchmark, prints JSON metrics and uploads the JSON artifact.
 - The benchmark is deliberately independent of Python compatibility, neural inference, frontend checks and real-video integration jobs, enabling concurrent execution.
