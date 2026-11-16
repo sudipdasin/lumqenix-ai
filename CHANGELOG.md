@@ -2,6 +2,10 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Enforce real-video CI prerequisites (2026-11-16)
+- Require FFmpeg, FFprobe, and the libx264 encoder in every CPU CI matrix job so generated-video integration tests cannot silently skip due to missing tools.
+- **Verification:** workflow committed; new CI execution not yet confirmed.
+
 ## Unreleased — Real FFmpeg integration coverage (2026-11-16)
 - Add an end-to-end generated-video test that runs actual FFmpeg and FFprobe, exercises the HTTP enhancement endpoint, and checks the encoded MP4 output dimensions.
 - Skip only if FFmpeg/FFprobe or libx264 are unavailable; no pretrained-model or portrait-quality claim is implied by this test.
