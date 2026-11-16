@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Preserve visual pretrained-model evidence (2026-11-17)
+- Extend the existing seven-lane CI quality artifact to include the paired high-resolution reference, low-resolution input, bicubic baseline, and actual FSRCNN/ESPCN output PNGs alongside the metrics JSON.
+- This enables direct visual inspection of enhancement artifacts and repeatable side-by-side comparisons without claiming that synthetic texture fidelity measures portrait identity.
+- **Verification:** artifact upload change committed; fresh CI artifact availability and image contents pending verification. Version unchanged.
+
 ## Unreleased — Repair quality benchmark imports (2026-11-17)
 - Fix pytest collection of `scripts.benchmark_quality_models` by using package-relative imports when imported as a module while retaining direct CLI script execution imports.
 - Root cause: GitHub Actions run 43968060998 failed in five test/video jobs with `ModuleNotFoundError: No module named 'benchmark_models'`; the frontend and CPU image benchmark lanes succeeded.
