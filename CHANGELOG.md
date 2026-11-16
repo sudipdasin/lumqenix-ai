@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Local FFmpeg command smoke validation (2026-11-16)
+- Executed FFmpeg locally against a generated 64×48, 1-second H.264 test clip using the application's auto filter chain and 2× scaling.
+- FFprobe confirmed a 128×96 encoded MP4 output (5,258 bytes). This validates the encoder/filter command on the test host, **not** the FastAPI endpoint or the full repository test suite.
+- The real-video CI prerequisite gate remains committed; its latest matrix result is not verified in this session.
+
 ## Unreleased — Enforce real-video CI prerequisites (2026-11-16)
 - Require FFmpeg, FFprobe, and the libx264 encoder in every CPU CI matrix job so generated-video integration tests cannot silently skip due to missing tools.
 - **Verification:** workflow committed; new CI execution not yet confirmed.
