@@ -73,3 +73,23 @@ def test_halo_tiles_reject_bad_model_outputs(failure, expected):
     ), patch("app.onnx_upscale._session", return_value=fake):
         with pytest.raises(expected):
             upscale(Image.new("RGB", (40, 40)), device="cpu", tile=32, overlap=8)
+
+
+@pytest.mark.parametrize("size,tile,overlap", [
+    ((65, 47), 32, 0),
+    ((103, 71), 32, 8),
+    ((127, 95), 64, 16),
+])
+def test_optimized_core_conversion_matches_full_halo_conversion(size, tile, overlap):
+    """Pixel-level reference against full-halo RGB conversion for x2 inference."""
+    width, height = size
+    rng = np.random.default_rng(7331)
+    original = rng.integers(0, 256, (height, width, 3), dtype=np.uint8)
+    fake = _NearestSession()
+    with patch("app.onnx_upscale.model_path", return_value="/tmp/model.onnx"), patch(
+        "app.onnx_upscale.configured_scale", return_value=2
+    ), patch("app.onnx_upscale._session", return_value=fake):
+        output, _ = upscale(Image.fromarray(original), device="cpu", tile=tile, overlap=overlap)
+    reference = np.repeat(np.repeat(original.astype(np.float32) / 255.0, 2, axis=0), 2, axis=1)
+    reference = np.clip(reference * 255.0, 0, 255).astype(np.uint8)
+    np.testing.assert_array_equal(np.asarray(output), reference)
