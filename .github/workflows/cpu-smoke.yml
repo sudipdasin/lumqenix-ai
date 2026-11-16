@@ -183,6 +183,7 @@ jobs:
           assert result["output_pixels"] == 512 * 512
           assert result["warm_runs"] == 3
           assert result["encoded_png_bytes"] > 0
+          assert result["output_format"] == "PNG"
           for key in ("warm_seconds_median", "warm_seconds_min", "warm_seconds_max", "peak_process_rss_mib"):
               assert math.isfinite(result[key]) and result[key] > 0, (key, result[key])
           assert result["warm_seconds_min"] <= result["warm_seconds_median"] <= result["warm_seconds_max"]
