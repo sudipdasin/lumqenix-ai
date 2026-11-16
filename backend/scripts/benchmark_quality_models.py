@@ -12,8 +12,12 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from benchmark_models import run
-from evaluate_quality import evaluate
+if __package__:
+    from .benchmark_models import run
+    from .evaluate_quality import evaluate
+else:
+    from benchmark_models import run
+    from evaluate_quality import evaluate
 
 
 def make_pair(directory):
