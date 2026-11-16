@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Accurate video readiness status (2026-11-16)
+- Report video processing availability only when both FFmpeg and FFprobe are present, matching the video endpoint's requirements.
+- Add positive and negative readiness regression tests.
+- **Verification:** committed, new tests not yet executed; no version promotion.
+
 ## Unreleased — Parallel CI milestone acceleration (2026-11-16)
 - Separate frontend JavaScript syntax checks from the four-job Python CPU/neural matrix so frontend validation runs concurrently.
 - Add a dedicated real-FFmpeg integration lane that installs backend dependencies, verifies H.264 encoding tools, executes the full pytest suite, and retains JUnit output even on failures.
