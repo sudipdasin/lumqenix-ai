@@ -95,7 +95,7 @@ jobs:
           command -v ffprobe
           ffmpeg -hide_banner -encoders | grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)'
       - name: Run real-video integration tests
-        run: python -m pytest -q tests -k 'real_ffmpeg or video_integration' --junitxml=video-integration-results.xml
+        run: python -m pytest -q tests --junitxml=video-integration-results.xml
       - name: Upload integration report
         if: always()
         uses: actions/upload-artifact@v4
