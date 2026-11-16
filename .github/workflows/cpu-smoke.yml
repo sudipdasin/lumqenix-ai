@@ -33,11 +33,16 @@ jobs:
           python -m pip uninstall -y opencv-python-headless
           python -m pip install "opencv-contrib-python-headless>=4.9,<5" "onnxruntime>=1.18,<2" onnx
           python scripts/fetch_test_models.py --output-dir /tmp/lumqenix-models
+      - name: Install FFmpeg with H.264 encoding support
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg libavcodec-extra
       - name: Verify real video integration prerequisites
         run: |
           command -v ffmpeg
           command -v ffprobe
-          ffmpeg -hide_banner -encoders | grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)'
+          ffmpeg -hide_banner -encoders | tee /tmp/lumqenix-encoders.txt
+          grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)' /tmp/lumqenix-encoders.txt
       - name: Check dependency consistency
         run: python -m pip check
       - name: Compile Python
@@ -89,11 +94,16 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - name: Install dependencies
         run: python -m pip install -r requirements.txt pytest httpx
+      - name: Install FFmpeg with H.264 encoding support
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg libavcodec-extra
       - name: Require FFmpeg with H.264 encoder
         run: |
           command -v ffmpeg
           command -v ffprobe
-          ffmpeg -hide_banner -encoders | grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)'
+          ffmpeg -hide_banner -encoders | tee /tmp/lumqenix-encoders.txt
+          grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)' /tmp/lumqenix-encoders.txt
       - name: Run real-video integration tests
         run: python -m pytest -q tests --junitxml=video-integration-results.xml
       - name: Upload integration report
