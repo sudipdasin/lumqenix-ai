@@ -36,6 +36,7 @@ def run_benchmark(width, height, runs, scale, preset):
     client = TestClient(app)
     timings = []
     output_size = None
+    output_format = None
     for iteration in range(runs + 1):
         started = time.perf_counter()
         response = client.post(
@@ -51,6 +52,9 @@ def run_benchmark(width, height, runs, scale, preset):
             expected = (width * scale, height * scale)
             if output.size != expected:
                 raise RuntimeError(f"Wrong output dimensions: {output.size} != {expected}")
+            if output.format != "PNG":
+                raise RuntimeError(f"Unexpected output format: {output.format}")
+            output_format = output.format
         if iteration:
             timings.append(elapsed)
         output_size = len(response.content)
@@ -66,6 +70,7 @@ def run_benchmark(width, height, runs, scale, preset):
         "warm_seconds_max": round(max(timings), 6),
         "peak_process_rss_mib": round(peak_rss_mib(), 2),
         "encoded_png_bytes": output_size,
+        "output_format": output_format,
         "note": "One untimed warmup; peak RSS is cumulative for the process.",
     }
 
