@@ -87,6 +87,41 @@ jobs:
               assert 0 < item['max_rss_bytes'] < 4 * 1024**3
               assert all(math.isfinite(t) and t > 0 for t in item['warm_seconds'])
           PY
+      - name: Measure real-model reconstruction fidelity against bicubic
+        if: matrix.neural && matrix.python == '3.12'
+        env:
+          LUMQENIX_FSRCNN_MODEL: /tmp/lumqenix-models/FSRCNN_x2.pb
+          LUMQENIX_ESPCN_MODEL: /tmp/lumqenix-models/ESPCN_x2.pb
+          OMP_NUM_THREADS: '2'
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          python scripts/benchmark_quality_models.py --output-dir /tmp/lumqenix-quality --repeats 2 --require-models > pretrained-quality.json
+          python - <<'PY'
+          import json
+          import math
+          from pathlib import Path
+          data = json.loads(Path("pretrained-quality.json").read_text())
+          assert data["reference_dimensions"] == [256, 256]
+          assert data["low_resolution_dimensions"] == [128, 128]
+          assert data["baseline_bicubic"]["mae_rgb"] > 0
+          for name in ("fsrcnn", "espcn"):
+              item = data["models"][name]
+              assert item["execution"]["status"] == "ok", (name, item)
+              quality = item["quality"]
+              assert quality["dimensions"] == [256, 256]
+              for key in ("prediction_metrics", "baseline_metrics"):
+                  metrics = quality[key]
+                  assert math.isfinite(metrics["mae_rgb"])
+                  assert math.isfinite(metrics["mse_rgb"])
+                  assert metrics["psnr_rgb_db"] is None or math.isfinite(metrics["psnr_rgb_db"])
+          PY
+      - name: Upload paired-reference pretrained quality evidence
+        if: always() && matrix.neural && matrix.python == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pretrained-quality-benchmark
+          path: backend/pretrained-quality.json
+          if-no-files-found: warn
       - name: Upload pretrained CPU benchmark evidence
         if: always() && matrix.neural && matrix.python == '3.12'
         uses: actions/upload-artifact@v4
