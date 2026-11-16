@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Reproducible CPU endpoint benchmarking (2026-11-17)
+- Add `backend/scripts/benchmark_api_cpu.py` to exercise the actual classic image-enhancement HTTP endpoint with generated deterministic input, validate output dimensions, and report warm latency plus process peak RSS in JSON.
+- Run with `cd backend && python scripts/benchmark_api_cpu.py --runs 3`; results reflect the execution host, not the target Intel laptop.
+- **Verification:** benchmark script committed; no execution result is claimed for this commit. Real pretrained-model and facial-fidelity benchmarks remain separate outstanding work.
+
 ## Unreleased — Accurate video readiness status (2026-11-16)
 - Report video processing availability only when both FFmpeg and FFprobe are present, matching the video endpoint's requirements.
 - Add positive and negative readiness regression tests.
