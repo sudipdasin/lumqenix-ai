@@ -12,6 +12,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Real-model reconstruction quality integration (2026-11-17)
+- Add `backend/scripts/benchmark_quality_models.py`: generate deterministic HR texture reference, bicubic-downsample to LR, run actual pretrained FSRCNN and ESPCN in isolated CPU processes, and compare reconstructed HR against bicubic using RGB PSNR, MAE and MSE.
+- Integrate the real-model quality report into the existing Python 3.12 neural CI lane with JSON validation and an uploadable artifact. Add two dataset/report contract tests.
+- **Verification:** implementation and CI configuration committed; no executed CI report or quantitative improvement claim yet. The synthetic dataset is not a facial-fidelity or perceptual benchmark and does not require models to beat bicubic.
+
 ## Unreleased — Paired-image objective quality evaluation (2026-11-17)
 - Introduce `backend/scripts/evaluate_quality.py` for reproducible full-reference RGB MSE, MAE and PSNR measurement, optional bicubic-baseline comparison, and JSON output. Lossless comparisons use a null PSNR rather than invalid JSON infinity.
 - Add four numerical regression tests: identical images, known PSNR, dimension mismatch, and baseline improvement arithmetic.
