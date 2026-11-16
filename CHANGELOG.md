@@ -2,6 +2,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Automated CPU benchmark CI lane (2026-11-17)
+- Add a seventh independent GitHub Actions job that installs the backend, executes the deterministic image API CPU benchmark, prints JSON metrics and uploads the JSON artifact.
+- The benchmark is deliberately independent of Python compatibility, neural inference, frontend checks and real-video integration jobs, enabling concurrent execution.
+- **Verification:** workflow committed, execution and measurements pending; do not interpret GitHub-hosted runner measurements as results on a 4 GB Intel laptop.
+
 ## Unreleased — Reproducible CPU endpoint benchmarking (2026-11-17)
 - Add `backend/scripts/benchmark_api_cpu.py` to exercise the actual classic image-enhancement HTTP endpoint with generated deterministic input, validate output dimensions, and report warm latency plus process peak RSS in JSON.
 - Run with `cd backend && python scripts/benchmark_api_cpu.py --runs 3`; results reflect the execution host, not the target Intel laptop.
