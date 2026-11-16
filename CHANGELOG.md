@@ -2,6 +2,12 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Parallel CI milestone acceleration (2026-11-16)
+- Separate frontend JavaScript syntax checks from the four-job Python CPU/neural matrix so frontend validation runs concurrently.
+- Add a dedicated real-FFmpeg integration lane that installs backend dependencies, verifies H.264 encoding tools, executes the full pytest suite, and retains JUnit output even on failures.
+- Existing four Python 3.10/3.12 neural/classic matrix jobs remain; this workflow now defines six independently scheduled jobs.
+- **Verification:** CI workflow committed; no successful run of the new six-job configuration has been established. This is an acceleration checkpoint, not a production release.
+
 ## Unreleased — Local FFmpeg command smoke validation (2026-11-16)
 - Executed FFmpeg locally against a generated 64×48, 1-second H.264 test clip using the application's auto filter chain and 2× scaling.
 - FFprobe confirmed a 128×96 encoded MP4 output (5,258 bytes). This validates the encoder/filter command on the test host, **not** the FastAPI endpoint or the full repository test suite.
