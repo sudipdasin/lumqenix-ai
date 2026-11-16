@@ -12,6 +12,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Neural tile-seam contract regression suite (2026-11-17)
+- Add six ONNX tiled-inference regression cases covering non-divisible dimensions, zero/positive halo, maximum permitted overlap, tile counts, exact nearest-neighbor reconstruction, malformed tensor shapes and non-finite output.
+- These deterministic fake-session tests validate halo stitching independently of model downloads. They do **not** establish real-model image quality or performance; those require separate pretrained-model runs.
+- **Verification:** test source committed to development branch; GitHub CI results pending.
+
 ## Unreleased — Benchmark output-format validation (2026-11-17)
 - Validate that the CPU image API benchmark returns a genuine PNG image rather than merely decodable output with expected dimensions.
 - Add the output format to the machine-readable benchmark JSON and require PNG in the CI acceptance gate.
