@@ -37,7 +37,7 @@ def status():
         onnx_ready = False
     return {"status":"ok", "version": VERSION, "hardware":detect_hardware(), "ai_model_configured":onnx_ready,
             "fsrcnn_available":fsrcnn_available(), "espcn_available":espcn_available(),
-            "ffmpeg_available":bool(shutil.which("ffmpeg")), "presets":sorted(PRESETS), "lite_mode": True, "lite_max_output_pixels":LITE_MAX_PIXELS}
+            "ffmpeg_available":bool(shutil.which("ffmpeg") and shutil.which("ffprobe")), "presets":sorted(PRESETS), "lite_mode": True, "lite_max_output_pixels":LITE_MAX_PIXELS}
 
 @app.get("/api/brand")
 def brand():
