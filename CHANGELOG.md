@@ -12,6 +12,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — ONNX core-only halo conversion (2026-11-17)
+- Optimize tiled ONNX super-resolution to convert only each tile's central output region from float32 NCHW to uint8 RGB. Halo pixels remain inference context and are no longer converted unnecessarily.
+- Add three exact-pixel reference regressions for the optimized path, including irregular dimensions and overlap variants.
+- Four isolated numerical equivalence checks passed locally; full repository CI, real-model image quality and end-to-end memory benchmarks remain pending.
+
 ## Unreleased — Neural tile-seam contract regression suite (2026-11-17)
 - Add six ONNX tiled-inference regression cases covering non-divisible dimensions, zero/positive halo, maximum permitted overlap, tile counts, exact nearest-neighbor reconstruction, malformed tensor shapes and non-finite output.
 - These deterministic fake-session tests validate halo stitching independently of model downloads. They do **not** establish real-model image quality or performance; those require separate pretrained-model runs.
