@@ -54,6 +54,46 @@ jobs:
             export LUMQENIX_ESPCN_MODEL=/tmp/lumqenix-models/ESPCN_x2.pb
           fi
           python -m pytest -q tests --junitxml=pytest-results.xml
+      - name: Benchmark actual pretrained models in isolated CPU processes
+        if: matrix.neural && matrix.python == '3.12'
+        env:
+          LUMQENIX_FSRCNN_MODEL: /tmp/lumqenix-models/FSRCNN_x2.pb
+          LUMQENIX_ESPCN_MODEL: /tmp/lumqenix-models/ESPCN_x2.pb
+          OMP_NUM_THREADS: '2'
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import numpy as np
+          from PIL import Image
+          y, x = np.indices((128, 128))
+          pixels = np.stack(((x * 7 + y * 3) % 256, (x * 2 + y * 11) % 256, (x + y * 5) % 256), axis=-1).astype('uint8')
+          Image.fromarray(pixels).save('/tmp/lumqenix-neural-input.png')
+          PY
+          python scripts/benchmark_models.py --input /tmp/lumqenix-neural-input.png --output-dir /tmp/lumqenix-neural-output --repeats 2 --require-models > pretrained-cpu-benchmark.json
+          python - <<'PY'
+          import json
+          import math
+          from pathlib import Path
+          data = json.loads(Path('pretrained-cpu-benchmark.json').read_text())
+          for name in ('fsrcnn', 'espcn'):
+              item = data[name]
+              assert item['status'] == 'ok', (name, item)
+              assert item['input_dimensions'] == [128, 128]
+              assert item['output_dimensions'] == [256, 256]
+              assert len(item['warm_seconds']) == 2
+              assert len(item['model_sha256']) == 64
+              assert item['max_rss_status'] == 'ok'
+              assert 0 < item['max_rss_bytes'] < 4 * 1024**3
+              assert all(math.isfinite(t) and t > 0 for t in item['warm_seconds'])
+          PY
+      - name: Upload pretrained CPU benchmark evidence
+        if: always() && matrix.neural && matrix.python == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pretrained-cpu-benchmark
+          path: backend/pretrained-cpu-benchmark.json
+          if-no-files-found: warn
       - name: Upload pytest results
         if: always()
         uses: actions/upload-artifact@v4
