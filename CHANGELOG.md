@@ -12,6 +12,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Benchmark output-format validation (2026-11-17)
+- Validate that the CPU image API benchmark returns a genuine PNG image rather than merely decodable output with expected dimensions.
+- Add the output format to the machine-readable benchmark JSON and require PNG in the CI acceptance gate.
+- **Verification:** changes committed; current CI run not verified. No version promotion.
+
 ## Unreleased — CPU benchmark acceptance gate (2026-11-17)
 - Validate JSON benchmark shape, output dimensions, successful PNG encoding, finite positive latency measurements, and consistent latency ordering in the CPU benchmark CI job.
 - Fail the benchmark job if measured peak process RSS reaches 4 GiB. This is a smoke budget on GitHub-hosted Linux, not proof of 4 GB laptop compatibility or a real-model quality threshold.
