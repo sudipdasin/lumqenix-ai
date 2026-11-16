@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Real pretrained CPU benchmark CI evidence (2026-11-17)
+- Extend the existing Python 3.12 neural CI matrix job (without adding an eighth job) to run both downloaded pretrained FSRCNN and ESPCN weights on deterministic 128×128 textured input in separate CPU processes.
+- Validate model SHA256 presence, exact 2× output dimensions, two positive warm timings, and measured process peak RSS below 4 GiB; upload a machine-readable JSON artifact even when validation fails.
+- **Verification:** the preceding seven-job workflow at commit `99d0b33` completed successfully (GitHub Actions run 43949177956). The new benchmark change is committed but its execution and performance values are pending. GitHub-hosted CPU measurements do not certify a 4 GB Intel laptop or portrait fidelity.
+
 ## Unreleased — Restore real-video CI prerequisites (2026-11-17)
 - GitHub Actions run 43943712224 failed in four test-matrix jobs and the FFmpeg integration job at the H.264 encoder prerequisite, while frontend and CPU benchmark jobs passed.
 - Explicitly install `ffmpeg` and `libavcodec-extra` before prerequisite checks in those five jobs; print the encoder list for diagnostics if the host image still lacks `libx264`.
