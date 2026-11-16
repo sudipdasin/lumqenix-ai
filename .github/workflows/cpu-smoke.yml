@@ -33,6 +33,11 @@ jobs:
           python -m pip uninstall -y opencv-python-headless
           python -m pip install "opencv-contrib-python-headless>=4.9,<5" "onnxruntime>=1.18,<2" onnx
           python scripts/fetch_test_models.py --output-dir /tmp/lumqenix-models
+      - name: Verify real video integration prerequisites
+        run: |
+          command -v ffmpeg
+          command -v ffprobe
+          ffmpeg -hide_banner -encoders | grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)'
       - name: Check dependency consistency
         run: python -m pip check
       - name: Compile Python
