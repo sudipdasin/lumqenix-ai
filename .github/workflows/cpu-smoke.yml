@@ -42,15 +42,6 @@ jobs:
         run: python -m pip check
       - name: Compile Python
         run: python -m compileall -q app scripts tests
-      - name: Validate frontend JavaScript syntax
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          html = Path("../frontend/index.html").read_text()
-          assert "<script>" in html and "</script>" in html
-          Path("/tmp/lumqenix-frontend.js").write_text(html.split("<script>", 1)[1].split("</script>", 1)[0])
-          PY
-          node --check /tmp/lumqenix-frontend.js
       - name: Run smoke tests
         run: |
           if [ "${{ matrix.neural }}" = "true" ]; then
@@ -65,3 +56,50 @@ jobs:
           name: pytest-${{ matrix.python }}-neural-${{ matrix.neural }}
           path: backend/pytest-results.xml
           if-no-files-found: warn
+
+  frontend:
+    name: Frontend syntax and static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate frontend JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path("frontend/index.html").read_text()
+          assert "<script>" in html and "</script>" in html
+          Path("/tmp/lumqenix-frontend.js").write_text(html.split("<script>", 1)[1].split("</script>", 1)[0])
+          PY
+          node --check /tmp/lumqenix-frontend.js
+
+  video-integration:
+    name: Real FFmpeg integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt pytest httpx
+      - name: Require FFmpeg with H.264 encoder
+        run: |
+          command -v ffmpeg
+          command -v ffprobe
+          ffmpeg -hide_banner -encoders | grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)'
+      - name: Run real-video integration tests
+        run: python -m pytest -q tests -k 'real_ffmpeg or video_integration' --junitxml=video-integration-results.xml
+      - name: Upload integration report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-video-integration
+          path: backend/video-integration-results.xml
+          if-no-files-found: error
