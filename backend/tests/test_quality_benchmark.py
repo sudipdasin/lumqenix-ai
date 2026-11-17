@@ -28,3 +28,20 @@ def test_quality_report_includes_real_baseline_and_model_failures(tmp_path):
     assert set(report["models"]) == {"fsrcnn", "espcn"}
     assert all("quality" not in item for item in report["models"].values())
     assert model_run.call_args.kwargs["require_models"] is True
+
+
+def test_edge_and_smooth_scenes_are_distinct_and_deterministic(tmp_path):
+    edge_dir = tmp_path / "edges"
+    smooth_dir = tmp_path / "smooth"
+    edge_hr, _, _ = make_pair(edge_dir, scene="edges")
+    smooth_hr, _, _ = make_pair(smooth_dir, scene="smooth")
+    assert edge_hr.read_bytes() != smooth_hr.read_bytes()
+    before = edge_hr.read_bytes()
+    make_pair(edge_dir, scene="edges")
+    assert edge_hr.read_bytes() == before
+
+
+def test_unknown_quality_scene_fails_closed(tmp_path):
+    import pytest
+    with pytest.raises(ValueError, match="Unknown benchmark scene"):
+        make_pair(tmp_path, scene="unverified")
