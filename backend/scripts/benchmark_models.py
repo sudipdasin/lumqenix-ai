@@ -188,7 +188,9 @@ def run(input_path, output_dir, repeats=3, timeout=180, require_models=False):
                 }
                 continue
             try:
-                results[name] = validate_worker_result(\n                    json.loads(completed.stdout), name, input_path, output_path, repeats\n                )
+                results[name] = validate_worker_result(
+                    json.loads(completed.stdout), name, input_path, output_path, repeats
+                )
             except json.JSONDecodeError as exc:
                 results[name] = {"status": "failed", "error": f"invalid worker output: {exc}"}
         except subprocess.TimeoutExpired:
