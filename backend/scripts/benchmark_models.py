@@ -170,6 +170,12 @@ def run(input_path, output_dir, repeats=3, timeout=180, require_models=False):
             continue
 
         output_path = output_dir / f"{name}-2x.png"
+        # Never allow a previous run's image to validate a new worker report.
+        try:
+            output_path.unlink(missing_ok=True)
+        except OSError as exc:
+            results[name] = {"status": "failed", "error": f"cannot clear stale output: {exc}"}
+            continue
         command = [
             sys.executable, str(Path(__file__).resolve()), "--_worker", name,
             "--input", str(input_path), "--_output", str(output_path),
