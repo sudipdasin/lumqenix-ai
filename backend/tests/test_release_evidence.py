@@ -42,6 +42,8 @@ def test_complete_evidence_passes():
     lambda p, q, a: q["models"]["espcn"]["quality"]["prediction_metrics"].update(mae_rgb=float("nan")),
     lambda p, q, a: q.update(reference_dimensions=[128, 128]),
     lambda p, q, a: p["fsrcnn"].update(model_sha256="z" * 64),
+    lambda p, q, a: q["models"]["fsrcnn"]["quality"]["baseline_metrics"].update(mae_rgb=11.0),
+    lambda p, q, a: q["models"]["espcn"]["quality"]["baseline_metrics"].update(mae_rgb=9.0),
     lambda p, q, a: q["models"]["fsrcnn"]["quality"]["prediction_metrics"].update(mae_rgb=True),
     lambda p, q, a: q["models"]["espcn"]["quality"]["baseline_metrics"].update(mse_rgb=False),
     lambda p, q, a: q["models"]["fsrcnn"]["quality"]["prediction_metrics"].update(psnr_rgb_db=True),
