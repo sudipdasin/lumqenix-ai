@@ -65,6 +65,12 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Cross-job release evidence gate (2026-11-17)
+- Add a dedicated eighth GitHub Actions job to download and cross-check actual pretrained CPU performance, paired-reference quality, and image API benchmark artifacts.
+- Fail closed on missing or inconsistent evidence, model SHA-256 mismatches, invalid quality numbers, and process RSS at or above 4 GiB. Add eight pass/failure regression cases.
+- Fix quality benchmark imports for both direct execution and pytest module imports.
+- **Verification:** committed, but GitHub Actions execution and end-to-end artifact gate results have not yet been observed. This gate validates evidence completeness; it does not certify perceptual superiority or facial fidelity.
+
 ## Unreleased — Real-model reconstruction quality integration (2026-11-17)
 - Add `backend/scripts/benchmark_quality_models.py`: generate deterministic HR texture reference, bicubic-downsample to LR, run actual pretrained FSRCNN and ESPCN in isolated CPU processes, and compare reconstructed HR against bicubic using RGB PSNR, MAE and MSE.
 - Integrate the real-model quality report into the existing Python 3.12 neural CI lane with JSON validation and an uploadable artifact. Add two dataset/report contract tests.
