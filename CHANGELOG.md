@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Reject stale pretrained benchmark output (2026-11-17)
+- Remove prior model output before launching each worker, preventing a previous PNG from being accepted as fresh evidence.
+- Report output cleanup errors per model and continue independent model evaluation.
+- Add regression coverage for a worker reporting success without producing a new image.
+- **Verification pending:** seven-lane CI and real-model benchmarks must pass before release promotion.
+
 ## Unreleased — Isolate pretrained worker launch errors (2026-11-17)
 - Record Python worker process launch errors as per-model failures, allowing the other model to be attempted.
 - Add a regression test simulating missing worker executable for both FSRCNN and ESPCN.
