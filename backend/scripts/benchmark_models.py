@@ -160,6 +160,14 @@ def run(input_path, output_dir, repeats=3, timeout=180, require_models=False):
         env_path = os.environ.get(MODEL_ENV[name], "").strip()
         model_file = Path(env_path).expanduser() if env_path else None
         is_configured = bool(model_file and model_file.is_file() and model_file.suffix.lower() == ".pb")
+        output_path = output_dir / f"{name}-2x.png"
+        # Clear evidence even for unavailable models: downstream consumers must
+        # never mistake an earlier successful image for this run's result.
+        try:
+            output_path.unlink(missing_ok=True)
+        except OSError as exc:
+            results[name] = {"status": "failed", "error": f"cannot clear stale output: {exc}"}
+            continue
         if not is_configured:
             results[name] = {
                 "status": "unavailable",
@@ -167,14 +175,6 @@ def run(input_path, output_dir, repeats=3, timeout=180, require_models=False):
                 "model_file": str(model_file) if model_file else None,
                 "model_sha256": None,
             }
-            continue
-
-        output_path = output_dir / f"{name}-2x.png"
-        # Never allow a previous run's image to validate a new worker report.
-        try:
-            output_path.unlink(missing_ok=True)
-        except OSError as exc:
-            results[name] = {"status": "failed", "error": f"cannot clear stale output: {exc}"}
             continue
         command = [
             sys.executable, str(Path(__file__).resolve()), "--_worker", name,
