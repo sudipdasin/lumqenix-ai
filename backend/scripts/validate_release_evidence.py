@@ -39,6 +39,10 @@ def validate(performance, quality, api):
         raise EvidenceError("Unexpected HR reference dimensions")
     baseline = quality.get("baseline_bicubic", {})
     positive(baseline.get("mae_rgb"), "bicubic MAE")
+    positive(baseline.get("mse_rgb"), "bicubic MSE")
+    baseline_psnr = baseline.get("psnr_rgb_db")
+    if baseline_psnr is not None and (isinstance(baseline_psnr, bool) or not isinstance(baseline_psnr, (int, float)) or not math.isfinite(baseline_psnr)):
+        raise EvidenceError("bicubic PSNR: expected finite numeric value")
     for name in ("fsrcnn", "espcn"):
         perf = performance.get(name, {})
         model = quality.get("models", {}).get(name, {})
@@ -64,11 +68,15 @@ def validate(performance, quality, api):
                 raise EvidenceError(f"{name}: invalid {label} MAE")
             if isinstance(m.get("mse_rgb"), bool) or not isinstance(m.get("mse_rgb"), (float, int)) or not math.isfinite(m["mse_rgb"]) or m["mse_rgb"] < 0:
                 raise EvidenceError(f"{name}: invalid {label} MSE")
-            if label == "baseline_metrics" and not math.isclose(m["mae_rgb"], baseline["mae_rgb"], rel_tol=0, abs_tol=1e-9):
-                raise EvidenceError(f"{name}: bicubic baseline disagrees with shared reference")
+            if label == "baseline_metrics":
+                for metric in ("mae_rgb", "mse_rgb"):
+                    if not math.isclose(m[metric], baseline[metric], rel_tol=0, abs_tol=1e-9):
+                        raise EvidenceError(f"{name}: bicubic {metric} disagrees with shared reference")
             psnr = m.get("psnr_rgb_db")
             if psnr is not None and (isinstance(psnr, bool) or not isinstance(psnr, (int, float)) or not math.isfinite(psnr)):
                 raise EvidenceError(f"{name}: invalid {label} PSNR")
+            if label == "baseline_metrics" and psnr != baseline_psnr:
+                raise EvidenceError(f"{name}: bicubic PSNR disagrees with shared reference")
     return {"evidence_complete": True, "model_count": 2,
             "memory_budget_mib": 4096,
             "quality_claim": "measurement only; no superiority or facial-fidelity claim"}
