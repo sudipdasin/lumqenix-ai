@@ -41,6 +41,10 @@ def test_complete_evidence_passes():
     lambda p, q, a: q["models"]["fsrcnn"]["execution"].update(model_sha256="b" * 64),
     lambda p, q, a: q["models"]["espcn"]["quality"]["prediction_metrics"].update(mae_rgb=float("nan")),
     lambda p, q, a: q.update(reference_dimensions=[128, 128]),
+    lambda p, q, a: p["fsrcnn"].update(model_sha256="z" * 64),
+    lambda p, q, a: q["models"]["fsrcnn"]["quality"]["prediction_metrics"].update(mae_rgb=True),
+    lambda p, q, a: q["models"]["espcn"]["quality"]["baseline_metrics"].update(mse_rgb=False),
+    lambda p, q, a: q["models"]["fsrcnn"]["quality"]["prediction_metrics"].update(psnr_rgb_db=True),
 ])
 def test_bad_evidence_is_rejected(mutate):
     documents = list(deepcopy(good_documents()))
