@@ -57,3 +57,23 @@ def test_unconfigured_model_removes_stale_evidence(tmp_path, monkeypatch):
     assert results["espcn"]["status"] == "unavailable"
     assert not stale_fsrcnn.exists()
     assert not stale_espcn.exists()
+
+
+def test_failed_worker_removes_partial_output(tmp_path, monkeypatch):
+    source = tmp_path / "source.png"
+    Image.new("RGB", (12, 10), "red").save(source)
+    output_dir = tmp_path / "results"
+    model = tmp_path / "test.pb"
+    model.write_bytes(b"fixture")
+    monkeypatch.setenv("LUMQENIX_FSRCNN_MODEL", str(model))
+    monkeypatch.delenv("LUMQENIX_ESPCN_MODEL", raising=False)
+
+    def partial_worker(*args, **kwargs):
+        Image.new("RGB", (24, 20), "blue").save(output_dir / "fsrcnn-2x.png")
+        return SimpleNamespace(returncode=1, stderr="worker failed", stdout="")
+
+    monkeypatch.setattr(benchmark_models.subprocess, "run", partial_worker)
+    results = benchmark_models.run(source, output_dir, repeats=1)
+    assert results["fsrcnn"]["status"] == "failed"
+    assert results["espcn"]["status"] == "unavailable"
+    assert not (output_dir / "fsrcnn-2x.png").exists()
