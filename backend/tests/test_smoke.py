@@ -243,7 +243,7 @@ def test_video_output_over_limit_rejected_before_read(monkeypatch):
     from app import main
     def fake_run(args, **kwargs):
         if args[0] == "ffprobe":
-            return CompletedProcess(args, 0, "64,48\\n", "")
+            return CompletedProcess(args, 0, "64,48\n", "")
         destination = __import__("pathlib").Path(args[-1])
         destination.write_bytes(b"small")
         return CompletedProcess(args, 0, b"", b"")
@@ -258,7 +258,7 @@ def test_video_output_under_limit_returns_mp4():
     from subprocess import CompletedProcess
     def fake_run(args, **kwargs):
         if args[0] == "ffprobe":
-            return CompletedProcess(args, 0, "64,48\\n", "")
+            return CompletedProcess(args, 0, "64,48\n", "")
         __import__("pathlib").Path(args[-1]).write_bytes(b"mock-mp4")
         return CompletedProcess(args, 0, b"", b"")
     with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
