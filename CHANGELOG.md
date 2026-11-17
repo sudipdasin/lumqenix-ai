@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Verify pretrained visual evidence integrity (2026-11-17)
+- Validate all five paired comparison PNG files exist, decode, have expected RGB dimensions, and contain nonempty data before uploading the quality artifact.
+- Record each image's SHA256, byte length, and dimensions in a machine-readable manifest alongside the quality report; keep the existing seven CI jobs.
+- **Verification:** CI change committed; new workflow outcome and manifest artifact not yet confirmed. The preceding commit `947f7d6` passed all seven jobs and uploaded the pretrained quality artifact. No version promotion or claim of improved portrait fidelity.
+
 ## Unreleased — Preserve visual pretrained-model evidence (2026-11-17)
 - Extend the existing seven-lane CI quality artifact to include the paired high-resolution reference, low-resolution input, bicubic baseline, and actual FSRCNN/ESPCN output PNGs alongside the metrics JSON.
 - This enables direct visual inspection of enhancement artifacts and repeatable side-by-side comparisons without claiming that synthetic texture fidelity measures portrait identity.
