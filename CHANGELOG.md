@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Paired model/bicubic divergence metrics (2026-11-17)
+- Add prediction-versus-bicubic MAE/MSE/PSNR and model PSNR improvement relative to bicubic to real pretrained quality reports, exposing no-op outputs and regressions without claiming portrait fidelity.
+- Add regression coverage for nonidentical outputs and lossless-reference PSNR edge cases.
+- **Verification:** source and tests committed; new seven-lane CI outcome pending. No version promotion.
+
 ## Unreleased — Verify pretrained visual evidence integrity (2026-11-17)
 - Validate all five paired comparison PNG files exist, decode, have expected RGB dimensions, and contain nonempty data before uploading the quality artifact.
 - Record each image's SHA256, byte length, and dimensions in a machine-readable manifest alongside the quality report; keep the existing seven CI jobs.
