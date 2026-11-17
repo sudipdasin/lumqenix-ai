@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Validate pretrained benchmark evidence (2026-11-17)
+- Verify each isolated model worker reports the expected model, 2x dimensions, exact warm-run count, positive finite timings, and a decodable RGB PNG at the declared output path.
+- Convert inconsistent worker success reports into explicit failed benchmark records instead of accepting incomplete evidence.
+- Add ten focused regression cases for valid, malformed, corrupt, and inconsistent evidence.
+- **Verification:** source and tests committed; new seven-lane CI pending. Previous head 54e5209 passed CI. No version promotion.
+
 ## Unreleased — Stream real-reference provenance hashing (2026-11-17)
 - Replace whole-file `read_bytes()` SHA-256 hashing of operator-supplied photographs with 1 MiB streaming chunks, preventing a second file-sized allocation during paired-quality benchmarking.
 - Add regression checks for multi-megabyte inputs and empty files; forbid whole-file reads in the test.
