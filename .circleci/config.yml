@@ -21,12 +21,7 @@ jobs:
       - run:
           name: Check frontend JavaScript syntax
           command: |
-            python - <<'PY'
-            from pathlib import Path
-            html = Path("frontend/index.html").read_text()
-            assert "<script>" in html and "</script>" in html
-            Path("/tmp/lumqenix-frontend.js").write_text(html.split("<script>", 1)[1].split("</script>", 1)[0])
-            PY
+            python -c 'from pathlib import Path; html = Path("frontend/index.html").read_text(); assert "<script>" in html and "</script>" in html; Path("/tmp/lumqenix-frontend.js").write_text(html.split("<script>", 1)[1].split("</script>", 1)[0])'
             node --check /tmp/lumqenix-frontend.js
 workflows:
   cpu-ci:
