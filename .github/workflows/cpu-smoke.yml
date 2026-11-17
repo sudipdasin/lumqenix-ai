@@ -96,6 +96,8 @@ jobs:
           OPENBLAS_NUM_THREADS: '1'
         run: |
           python scripts/benchmark_quality_models.py --output-dir /tmp/lumqenix-quality --repeats 2 --require-models > pretrained-quality.json
+          python scripts/benchmark_quality_models.py --scene edges --output-dir /tmp/lumqenix-quality-edges --repeats 2 --require-models > pretrained-quality-edges.json
+          python scripts/benchmark_quality_models.py --scene smooth --output-dir /tmp/lumqenix-quality-smooth --repeats 2 --require-models > pretrained-quality-smooth.json
           python - <<'PY'
           import json
           import math
