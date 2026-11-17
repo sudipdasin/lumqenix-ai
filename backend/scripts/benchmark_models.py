@@ -204,6 +204,13 @@ def run(input_path, output_dir, repeats=3, timeout=180, require_models=False):
         except OSError as exc:
             # A failed worker launch must be recorded, not abort the entire benchmark.
             results[name] = {"status": "failed", "error": f"worker launch failed: {type(exc).__name__}: {exc}"}
+        finally:
+            # Failed or unavailable workers must not leave partial output as evidence.
+            if results.get(name, {}).get("status") != "ok":
+                try:
+                    output_path.unlink(missing_ok=True)
+                except OSError as exc:
+                    results[name] = {"status": "failed", "error": f"cannot clear failed output: {exc}"}
 
     return results
 
