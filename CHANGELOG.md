@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Repair pretrained benchmark syntax (2026-11-17)
+- Replace accidentally serialized literal `\n` tokens in the model worker validation call with real Python newlines.
+- Diagnosed from seven-lane CI run 44016485419: five jobs failed because Python could not compile `backend/scripts/benchmark_models.py`; frontend and CPU API benchmark succeeded.
+- **Verification:** source fix committed; fresh CI verification pending. No version promotion.
+
 ## Unreleased — Validate pretrained benchmark evidence (2026-11-17)
 - Verify each isolated model worker reports the expected model, 2x dimensions, exact warm-run count, positive finite timings, and a decodable RGB PNG at the declared output path.
 - Convert inconsistent worker success reports into explicit failed benchmark records instead of accepting incomplete evidence.
