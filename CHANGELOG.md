@@ -65,6 +65,12 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Multi-scene pretrained quality evaluation (2026-11-17)
+- Extend deterministic paired-reference quality evaluation from one texture scene to three independent scenes: textures, hard edges, and smooth gradients. All use genuine pretrained FSRCNN and ESPCN inference in the Python 3.12 neural CI lane.
+- Upload separate machine-readable quality reports for each scene. Add two tests for deterministic scene differences and rejection of unsupported scene identifiers.
+- Fix quality benchmark import handling so direct script execution and pytest imports both work.
+- **Verification:** code and CI wiring committed; end-to-end CI and model measurements still require confirmation. Synthetic scenes do not establish natural-photo or face fidelity.
+
 ## Unreleased — Cross-job release evidence gate (2026-11-17)
 - Add a dedicated eighth GitHub Actions job to download and cross-check actual pretrained CPU performance, paired-reference quality, and image API benchmark artifacts.
 - Fail closed on missing or inconsistent evidence, model SHA-256 mismatches, invalid quality numbers, and process RSS at or above 4 GiB. Add eight pass/failure regression cases.
