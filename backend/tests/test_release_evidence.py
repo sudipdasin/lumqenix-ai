@@ -12,7 +12,7 @@ def good_documents():
     quality = {
         "dataset": "deterministic-synthetic-textures-v1",
         "reference_dimensions": [256, 256],
-        "baseline_bicubic": {"mae_rgb": 10.0},
+        "baseline_bicubic": {"mae_rgb": 10.0, "mse_rgb": 120.0, "psnr_rgb_db": 27.3},
         "models": {},
     }
     for name in ("fsrcnn", "espcn"):
@@ -47,6 +47,10 @@ def test_complete_evidence_passes():
     lambda p, q, a: q["models"]["fsrcnn"]["quality"]["prediction_metrics"].update(mae_rgb=True),
     lambda p, q, a: q["models"]["espcn"]["quality"]["baseline_metrics"].update(mse_rgb=False),
     lambda p, q, a: q["models"]["fsrcnn"]["quality"]["prediction_metrics"].update(psnr_rgb_db=True),
+    lambda p, q, a: q["models"]["fsrcnn"]["quality"]["baseline_metrics"].update(mse_rgb=121.0),
+    lambda p, q, a: q["models"]["espcn"]["quality"]["baseline_metrics"].update(psnr_rgb_db=26.3),
+    lambda p, q, a: q["baseline_bicubic"].update(mse_rgb=False),
+    lambda p, q, a: q["baseline_bicubic"].update(psnr_rgb_db=float("nan")),
 ])
 def test_bad_evidence_is_rejected(mutate):
     documents = list(deepcopy(good_documents()))
