@@ -30,25 +30,31 @@ def reference_sha256(path):
     return digest.hexdigest()
 
 
-def make_pair(directory, reference_path=None):
+def make_pair(directory, reference_path=None, scene="textures"):
+    """Prepare a deterministic synthetic scene or a real RGB reference pair."""
+    if scene not in ("textures", "edges", "smooth"):
+        raise ValueError(f"Unknown benchmark scene: {scene}")
     directory.mkdir(parents=True, exist_ok=True)
     if reference_path is None:
         yy, xx = np.indices((256, 256))
-        checker = ((xx // 8 + yy // 8) % 2) * 40
-        reference = np.stack((
-            (xx * 3 + yy * 2 + checker) % 256,
-            (xx + yy * 4 + checker) % 256,
-            (xx * 2 + yy * 3 + checker) % 256,
-        ), axis=-1).astype(np.uint8)
-        if scene == "edges":
-        # Hard discontinuities and fine diagonal structures stress ringing.
-        mask = ((xx > yy) ^ ((xx // 16) % 2 == 0))
-        reference = np.stack((mask * 255, ((xx // 4) % 2) * 255,
-                              ((yy // 4) % 2) * 255), axis=-1).astype(np.uint8)
-    elif scene == "smooth":
-        # Low-frequency gradients expose banding and color drift.
-        reference = np.stack((xx, yy, (xx // 2 + yy // 2)), axis=-1).astype(np.uint8)
-    hr = Image.fromarray(reference, "RGB")
+        if scene == "textures":
+            checker = ((xx // 8 + yy // 8) % 2) * 40
+            reference = np.stack((
+                (xx * 3 + yy * 2 + checker) % 256,
+                (xx + yy * 4 + checker) % 256,
+                (xx * 2 + yy * 3 + checker) % 256,
+            ), axis=-1).astype(np.uint8)
+        elif scene == "edges":
+            mask = ((xx > yy) ^ ((xx // 16) % 2 == 0))
+            reference = np.stack((
+                mask * 255, ((xx // 4) % 2) * 255,
+                ((yy // 4) % 2) * 255,
+            ), axis=-1).astype(np.uint8)
+        else:
+            reference = np.stack((
+                xx, yy, xx // 2 + yy // 2,
+            ), axis=-1).astype(np.uint8)
+        hr = Image.fromarray(reference, "RGB")
     else:
         with Image.open(reference_path) as source:
             corrected = ImageOps.exif_transpose(source)
@@ -65,13 +71,13 @@ def make_pair(directory, reference_path=None):
     return hr_path, lr_path, bicubic_path
 
 
-def run_quality(output_dir, repeats=2, timeout=180, reference_path=None):
-    hr, lr, bicubic = make_pair(output_dir, reference_path)
+def run_quality(output_dir, repeats=2, timeout=180, reference_path=None, scene="textures"):
+    hr, lr, bicubic = make_pair(output_dir, reference_path, scene=scene)
     model_dir = output_dir / "models"
     performance = run(lr, model_dir, repeats=repeats, timeout=timeout, require_models=True)
     baseline = evaluate(hr, bicubic)["prediction_metrics"]
     result = {
-        "dataset": "operator-reference-v1" if reference_path is not None else "deterministic-synthetic-textures-v1",
+        "dataset": "operator-reference-v1" if reference_path is not None else f"deterministic-synthetic-{scene}-v1",
         "source_sha256": reference_sha256(reference_path) if reference_path is not None else None,
         "reference_dimensions": [256, 256],
         "low_resolution_dimensions": [128, 128],
@@ -98,7 +104,7 @@ def main():
     args = parser.parse_args()
     if args.repeats < 1 or args.timeout < 1:
         parser.error("repeats and timeout must be positive")
-    results = run_quality(args.output_dir, args.repeats, args.timeout, args.reference_image)
+    results = run_quality(args.output_dir, args.repeats, args.timeout, args.reference_image, scene=args.scene)
     print(json.dumps(results, indent=2, allow_nan=False))
     if args.require_models and any(
         results["models"][name]["execution"].get("status") != "ok"
