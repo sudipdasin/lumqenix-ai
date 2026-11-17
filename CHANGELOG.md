@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Isolate pretrained worker launch errors (2026-11-17)
+- Record Python worker process launch errors as per-model failures, allowing the other model to be attempted.
+- Add a regression test simulating missing worker executable for both FSRCNN and ESPCN.
+- **Verification pending:** commits require the seven-lane CI matrix; no model-quality or 4 GiB RAM performance claims.
+
 ## Unreleased — Repair pretrained benchmark syntax (2026-11-17)
 - Replace accidentally serialized literal `\n` tokens in the model worker validation call with real Python newlines.
 - Diagnosed from seven-lane CI run 44016485419: five jobs failed because Python could not compile `backend/scripts/benchmark_models.py`; frontend and CPU API benchmark succeeded.
