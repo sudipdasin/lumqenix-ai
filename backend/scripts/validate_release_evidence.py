@@ -10,6 +10,7 @@ models outperform bicubic or preserve identity. Those require external criteria.
 import argparse
 import json
 import math
+import re
 from pathlib import Path
 
 
@@ -45,7 +46,7 @@ def validate(performance, quality, api):
             raise EvidenceError(f"{name}: pretrained execution evidence missing")
         if perf.get("model_sha256") != model["execution"].get("model_sha256"):
             raise EvidenceError(f"{name}: model hashes differ between benchmarks")
-        if not isinstance(perf["model_sha256"], str) or len(perf["model_sha256"]) != 64:
+        if not isinstance(perf["model_sha256"], str) or re.fullmatch(r"[0-9a-fA-F]{64}", perf["model_sha256"]) is None:
             raise EvidenceError(f"{name}: invalid model hash")
         positive(perf.get("max_rss_bytes"), f"{name} peak RSS")
         if perf["max_rss_bytes"] >= 4 * 1024 ** 3:
@@ -59,12 +60,12 @@ def validate(performance, quality, api):
             raise EvidenceError(f"{name}: unexpected output dimensions")
         for label in ("prediction_metrics", "baseline_metrics"):
             m = measures.get(label, {})
-            if not isinstance(m.get("mae_rgb"), (float, int)) or not math.isfinite(m["mae_rgb"]) or m["mae_rgb"] < 0:
+            if isinstance(m.get("mae_rgb"), bool) or not isinstance(m.get("mae_rgb"), (float, int)) or not math.isfinite(m["mae_rgb"]) or m["mae_rgb"] < 0:
                 raise EvidenceError(f"{name}: invalid {label} MAE")
-            if not isinstance(m.get("mse_rgb"), (float, int)) or not math.isfinite(m["mse_rgb"]) or m["mse_rgb"] < 0:
+            if isinstance(m.get("mse_rgb"), bool) or not isinstance(m.get("mse_rgb"), (float, int)) or not math.isfinite(m["mse_rgb"]) or m["mse_rgb"] < 0:
                 raise EvidenceError(f"{name}: invalid {label} MSE")
             psnr = m.get("psnr_rgb_db")
-            if psnr is not None and (not isinstance(psnr, (int, float)) or not math.isfinite(psnr)):
+            if psnr is not None and (isinstance(psnr, bool) or not isinstance(psnr, (int, float)) or not math.isfinite(psnr)):
                 raise EvidenceError(f"{name}: invalid {label} PSNR")
     return {"evidence_complete": True, "model_count": 2,
             "memory_budget_mib": 4096,
