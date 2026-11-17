@@ -195,6 +195,9 @@ def run(input_path, output_dir, repeats=3, timeout=180, require_models=False):
                 results[name] = {"status": "failed", "error": f"invalid worker output: {exc}"}
         except subprocess.TimeoutExpired:
             results[name] = {"status": "failed", "error": f"benchmark timed out after {timeout} seconds"}
+        except OSError as exc:
+            # A failed worker launch must be recorded, not abort the entire benchmark.
+            results[name] = {"status": "failed", "error": f"worker launch failed: {type(exc).__name__}: {exc}"}
 
     return results
 
