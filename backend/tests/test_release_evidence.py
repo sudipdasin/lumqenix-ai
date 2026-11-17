@@ -1,0 +1,49 @@
+"""Release evidence gate regression tests: no fabricated passes."""
+from copy import deepcopy
+
+import pytest
+
+from scripts.validate_release_evidence import EvidenceError, validate
+
+
+def good_documents():
+    hash_value = "a" * 64
+    perf = {}
+    quality = {
+        "dataset": "deterministic-synthetic-textures-v1",
+        "reference_dimensions": [256, 256],
+        "baseline_bicubic": {"mae_rgb": 10.0},
+        "models": {},
+    }
+    for name in ("fsrcnn", "espcn"):
+        perf[name] = {"status": "ok", "model_sha256": hash_value,
+                      "max_rss_bytes": 100 * 1024 ** 2, "warm_seconds": [0.2]}
+        quality["models"][name] = {
+            "execution": {"status": "ok", "model_sha256": hash_value},
+            "quality": {"dimensions": [256, 256],
+                        "prediction_metrics": {"mae_rgb": 9.0, "mse_rgb": 100.0, "psnr_rgb_db": 28.1},
+                        "baseline_metrics": {"mae_rgb": 10.0, "mse_rgb": 120.0, "psnr_rgb_db": 27.3}},
+        }
+    api = {"output_format": "PNG", "peak_process_rss_mib": 200.0,
+           "warm_seconds_median": 0.5}
+    return perf, quality, api
+
+
+def test_complete_evidence_passes():
+    assert validate(*good_documents())["evidence_complete"] is True
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda p, q, a: a.update(output_format="JPEG"),
+    lambda p, q, a: a.update(peak_process_rss_mib=4096),
+    lambda p, q, a: p["fsrcnn"].update(status="unavailable"),
+    lambda p, q, a: p["espcn"].update(max_rss_bytes=4 * 1024 ** 3),
+    lambda p, q, a: q["models"]["fsrcnn"]["execution"].update(model_sha256="b" * 64),
+    lambda p, q, a: q["models"]["espcn"]["quality"]["prediction_metrics"].update(mae_rgb=float("nan")),
+    lambda p, q, a: q.update(reference_dimensions=[128, 128]),
+])
+def test_bad_evidence_is_rejected(mutate):
+    documents = list(deepcopy(good_documents()))
+    mutate(*documents)
+    with pytest.raises(EvidenceError):
+        validate(*documents)
