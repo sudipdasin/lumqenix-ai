@@ -21,6 +21,15 @@ else:
     from evaluate_quality import evaluate
 
 
+def reference_sha256(path):
+    """Hash operator images in bounded chunks without allocating the full file."""
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def make_pair(directory, reference_path=None):
     directory.mkdir(parents=True, exist_ok=True)
     if reference_path is None:
@@ -55,7 +64,7 @@ def run_quality(output_dir, repeats=2, timeout=180, reference_path=None):
     baseline = evaluate(hr, bicubic)["prediction_metrics"]
     result = {
         "dataset": "operator-reference-v1" if reference_path is not None else "deterministic-synthetic-textures-v1",
-        "source_sha256": hashlib.sha256(reference_path.read_bytes()).hexdigest() if reference_path is not None else None,
+        "source_sha256": reference_sha256(reference_path) if reference_path is not None else None,
         "reference_dimensions": [256, 256],
         "low_resolution_dimensions": [128, 128],
         "baseline_bicubic": baseline,
