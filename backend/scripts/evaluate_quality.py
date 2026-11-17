@@ -50,6 +50,13 @@ def evaluate(reference_path, prediction_path, baseline_path=None):
         baseline = load_rgb(baseline_path)
         result["baseline"] = str(baseline_path)
         result["baseline_metrics"] = metrics(reference, baseline)
+        result["prediction_vs_baseline"] = metrics(baseline, prediction)
+        result["psnr_improvement_vs_baseline_db"] = (
+            None if result["prediction_metrics"]["psnr_rgb_db"] is None
+            or result["baseline_metrics"]["psnr_rgb_db"] is None
+            else round(result["prediction_metrics"]["psnr_rgb_db"] -
+                       result["baseline_metrics"]["psnr_rgb_db"], 6)
+        )
         result["mae_improvement_vs_baseline"] = round(
             result["baseline_metrics"]["mae_rgb"] - result["prediction_metrics"]["mae_rgb"], 6
         )
