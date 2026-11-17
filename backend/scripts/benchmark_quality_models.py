@@ -40,7 +40,15 @@ def make_pair(directory, reference_path=None):
             (xx + yy * 4 + checker) % 256,
             (xx * 2 + yy * 3 + checker) % 256,
         ), axis=-1).astype(np.uint8)
-        hr = Image.fromarray(reference, "RGB")
+        if scene == "edges":
+        # Hard discontinuities and fine diagonal structures stress ringing.
+        mask = ((xx > yy) ^ ((xx // 16) % 2 == 0))
+        reference = np.stack((mask * 255, ((xx // 4) % 2) * 255,
+                              ((yy // 4) % 2) * 255), axis=-1).astype(np.uint8)
+    elif scene == "smooth":
+        # Low-frequency gradients expose banding and color drift.
+        reference = np.stack((xx, yy, (xx // 2 + yy // 2)), axis=-1).astype(np.uint8)
+    hr = Image.fromarray(reference, "RGB")
     else:
         with Image.open(reference_path) as source:
             corrected = ImageOps.exif_transpose(source)
@@ -85,6 +93,7 @@ def main():
     parser.add_argument("--repeats", type=int, default=2)
     parser.add_argument("--timeout", type=int, default=180)
     parser.add_argument("--require-models", action="store_true")
+    parser.add_argument("--scene", choices=("textures", "edges", "smooth"), default="textures")
     parser.add_argument("--reference-image", type=Path, help="Operator-supplied real reference image (at least 256x256)")
     args = parser.parse_args()
     if args.repeats < 1 or args.timeout < 1:
