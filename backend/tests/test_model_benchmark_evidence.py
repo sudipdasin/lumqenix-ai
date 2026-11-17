@@ -38,6 +38,8 @@ def test_valid_evidence(evidence):
     ("output_dimensions", [12, 10]),
     ("input_dimensions", [1, 1]),
     ("warm_seconds", [0.1]),
+    ("cold_seconds", True),
+    ("warm_seconds", [0.1, False]),
     ("cold_seconds", float("nan")),
     ("warm_seconds", [0.1, -0.2]),
     ("output_file", "/nonexistent/benchmark.png"),
