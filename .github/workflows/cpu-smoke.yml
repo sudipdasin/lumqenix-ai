@@ -147,7 +147,7 @@ jobs:
                   'bytes': len(data),
               }
           Path('pretrained-quality-manifest.json').write_text(
-              json.dumps(manifest, indent=2, sort_keys=True) + '\\n'
+              json.dumps(manifest, indent=2, sort_keys=True) + '\n'
           )
           PY
       - name: Upload paired-reference pretrained quality evidence
