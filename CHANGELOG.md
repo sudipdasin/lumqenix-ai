@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Stream real-reference provenance hashing (2026-11-17)
+- Replace whole-file `read_bytes()` SHA-256 hashing of operator-supplied photographs with 1 MiB streaming chunks, preventing a second file-sized allocation during paired-quality benchmarking.
+- Add regression checks for multi-megabyte inputs and empty files; forbid whole-file reads in the test.
+- **Verification:** code and tests committed; fresh seven-lane CI pending. This is a benchmark memory-safety improvement, not evidence of better enhancement quality. No version promotion.
+
 ## Unreleased — Operator-supplied real-image reconstruction benchmark (2026-11-17)
 - Add optional `--reference-image` to the pretrained FSRCNN/ESPCN paired-quality benchmark. EXIF-correct and center-crop a supplied image to 256x256, downsample to 128x128, then evaluate both models against the real reference and bicubic baseline.
 - Record SHA-256 of the original reference bytes and distinguish operator-reference from synthetic-texture datasets. Preserve the original synthetic CI benchmark by default.
