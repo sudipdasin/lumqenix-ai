@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Operator-supplied real-image reconstruction benchmark (2026-11-17)
+- Add optional `--reference-image` to the pretrained FSRCNN/ESPCN paired-quality benchmark. EXIF-correct and center-crop a supplied image to 256x256, downsample to 128x128, then evaluate both models against the real reference and bicubic baseline.
+- Record SHA-256 of the original reference bytes and distinguish operator-reference from synthetic-texture datasets. Preserve the original synthetic CI benchmark by default.
+- Add regression tests for reference dimensions, provenance, missing minimum resolution, and synthetic fallback.
+- **Verification:** changes committed; fresh CI and genuine pretrained-image results pending. These reconstruction metrics do not establish portrait identity preservation or perceptual quality. No version promotion.
+
 ## Unreleased — Paired model/bicubic divergence metrics (2026-11-17)
 - Add prediction-versus-bicubic MAE/MSE/PSNR and model PSNR improvement relative to bicubic to real pretrained quality reports, exposing no-op outputs and regressions without claiming portrait fidelity.
 - Add regression coverage for nonidentical outputs and lossless-reference PSNR edge cases.
