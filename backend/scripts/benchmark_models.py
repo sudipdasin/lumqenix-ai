@@ -139,7 +139,7 @@ def validate_worker_result(result, name, input_path, output_path, repeats):
         if len(result.get("warm_seconds", [])) != repeats:
             raise ValueError("warm repetition count mismatch")
         timings = [result.get("cold_seconds"), *result["warm_seconds"]]
-        if any(not isinstance(t, (int, float)) or not math.isfinite(t) or t <= 0 for t in timings):
+        if any(type(t) not in (int, float) or not math.isfinite(t) or t <= 0 for t in timings):
             raise ValueError("nonpositive or nonfinite timing")
         if result.get("output_file") != str(output_path) or not output_path.is_file():
             raise ValueError("missing or mismatched output image")
