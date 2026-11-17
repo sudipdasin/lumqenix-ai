@@ -6,6 +6,7 @@ LUMQENIX_ESPCN_MODEL with paths to trusted .pb files before running.
 import argparse
 import hashlib
 import json
+import math
 import os
 import platform
 import subprocess
@@ -119,6 +120,39 @@ def worker(model_name, input_path, output_path, repeats):
     return base
 
 
+def validate_worker_result(result, name, input_path, output_path, repeats):
+    """Reject incomplete or implausible success reports before publishing evidence."""
+    if not isinstance(result, dict):
+        return {"status": "failed", "error": "worker returned a non-object JSON value"}
+    if result.get("status") != "ok":
+        return result
+    try:
+        with __import__("PIL.Image", fromlist=["Image"]).open(input_path) as image:
+            width, height = image.size
+        expected = [width * 2, height * 2]
+        if result.get("model") != name:
+            raise ValueError("model identity mismatch")
+        if result.get("input_dimensions") != [width, height]:
+            raise ValueError("input dimensions mismatch")
+        if result.get("output_dimensions") != expected:
+            raise ValueError("output dimensions mismatch")
+        if len(result.get("warm_seconds", [])) != repeats:
+            raise ValueError("warm repetition count mismatch")
+        timings = [result.get("cold_seconds"), *result["warm_seconds"]]
+        if any(not isinstance(t, (int, float)) or not math.isfinite(t) or t <= 0 for t in timings):
+            raise ValueError("nonpositive or nonfinite timing")
+        if result.get("output_file") != str(output_path) or not output_path.is_file():
+            raise ValueError("missing or mismatched output image")
+        with __import__("PIL.Image", fromlist=["Image"]).open(output_path) as image:
+            image.verify()
+        with __import__("PIL.Image", fromlist=["Image"]).open(output_path) as image:
+            if list(image.size) != expected or image.mode != "RGB":
+                raise ValueError("output image dimensions or mode mismatch")
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        return {"status": "failed", "error": f"invalid worker evidence: {exc}"}
+    return result
+
+
 def run(input_path, output_dir, repeats=3, timeout=180, require_models=False):
     output_dir.mkdir(parents=True, exist_ok=True)
     results = {}
@@ -154,7 +188,7 @@ def run(input_path, output_dir, repeats=3, timeout=180, require_models=False):
                 }
                 continue
             try:
-                results[name] = json.loads(completed.stdout)
+                results[name] = validate_worker_result(\n                    json.loads(completed.stdout), name, input_path, output_path, repeats\n                )
             except json.JSONDecodeError as exc:
                 results[name] = {"status": "failed", "error": f"invalid worker output: {exc}"}
         except subprocess.TimeoutExpired:
