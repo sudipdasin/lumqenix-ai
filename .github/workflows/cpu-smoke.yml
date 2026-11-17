@@ -275,3 +275,26 @@ jobs:
           name: cpu-image-api-benchmark
           path: backend/cpu-benchmark.json
           if-no-files-found: error
+
+  release-evidence:
+    name: Cross-job real-model evidence gate
+    needs: [test, cpu-benchmark]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Retrieve actual benchmark artifacts from completed jobs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '{pretrained-cpu-benchmark,pretrained-quality-benchmark,cpu-image-api-benchmark}'
+          merge-multiple: true
+          path: /tmp/lumqenix-evidence
+      - name: Reject missing, inconsistent, or over-budget evidence
+        run: |
+          python backend/scripts/validate_release_evidence.py \
+            --performance /tmp/lumqenix-evidence/pretrained-cpu-benchmark.json \
+            --quality /tmp/lumqenix-evidence/pretrained-quality.json \
+            --api /tmp/lumqenix-evidence/cpu-benchmark.json
