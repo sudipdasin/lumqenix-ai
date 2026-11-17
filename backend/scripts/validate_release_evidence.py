@@ -64,6 +64,8 @@ def validate(performance, quality, api):
                 raise EvidenceError(f"{name}: invalid {label} MAE")
             if isinstance(m.get("mse_rgb"), bool) or not isinstance(m.get("mse_rgb"), (float, int)) or not math.isfinite(m["mse_rgb"]) or m["mse_rgb"] < 0:
                 raise EvidenceError(f"{name}: invalid {label} MSE")
+            if label == "baseline_metrics" and not math.isclose(m["mae_rgb"], baseline["mae_rgb"], rel_tol=0, abs_tol=1e-9):
+                raise EvidenceError(f"{name}: bicubic baseline disagrees with shared reference")
             psnr = m.get("psnr_rgb_db")
             if psnr is not None and (isinstance(psnr, bool) or not isinstance(psnr, (int, float)) or not math.isfinite(psnr)):
                 raise EvidenceError(f"{name}: invalid {label} PSNR")
