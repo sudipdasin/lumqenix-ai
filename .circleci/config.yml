@@ -91,7 +91,7 @@ jobs:
             import numpy as np
             from PIL import Image
             y, x = np.indices((128, 128))
-            rgb = np.stack(((x * 7 + y * 3) % 256, (x * 2 + y * 11) % 256, (x + y * 5) % 256, (x + y * 5) % 256), -1).astype('uint8')
+            rgb = np.stack(((x * 7 + y * 3) % 256, (x * 2 + y * 11) % 256, (x + y * 5) % 256), -1).astype('uint8')
             Image.fromarray(rgb).save('/tmp/lumqenix-ci-input.png')
             PY
             python scripts/benchmark_models.py --input /tmp/lumqenix-ci-input.png --output-dir /tmp/lumqenix-ci-models --repeats 2 --require-models > pretrained-cpu-benchmark.json
