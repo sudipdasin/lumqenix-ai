@@ -39,7 +39,7 @@ lumqenix-pro/                Separate private repository (to create)
 ## Publication and licensing gate
 
 1. Inventory all files and the **entire Git history** for secrets, PII, proprietary assets, and third-party rights. Removing a file in a later commit does not remove it from history.
-2. Select and publish an explicit Community OSS license after reviewing dependencies and contributor obligations; **do not assume existing private source is automatically open source**. Add `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, and clear notices.
+2. The Community development branch now has an MIT license for **original project source** and contributor/security policies. Before public distribution, audit provenance, all upstream dependencies and third-party assets; do not assume rights over third-party code or weights.
 3. Run `python scripts/check_edition_boundary.py` in Community CI before packaging and publication. This guard checks tracked paths only; also use secret scanning, license scanning, artifact inspection, and history review.
 4. Create the Pro repository **private** and restrict collaborators, tokens, CI environments and artifact retention. Never place private assets in public forks or pull requests.
 5. Pin Community dependency in Pro; test both editions independently in Linux VM CI, including actual pretrained models, FFmpeg, 4 GiB RSS ceilings, and install/uninstall. Gate release tags on passing evidence.
@@ -51,4 +51,4 @@ Public contributors retain their rights under the chosen OSS license; Pro must r
 
 ## Current execution status
 
-The existing repository is still private. This document establishes the boundary and migration plan, not a completed public/private split. The separate Pro repository, license decision, full history audit, automated upstream sync and installable builds remain pending verification.
+The existing Community repository is still private. MIT-licensed source and Community edition API are implemented on the development branch, but publication still requires a full history and third-party rights audit. A **separate private Pro repository bootstrap** with an experimental Fidelity Guard has been prepared outside this repository; the GitHub Pro repository itself is **not created yet**. Reviewed upstream synchronization, VM tests, installer verification and commercial licensing remain open.
