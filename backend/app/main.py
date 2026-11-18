@@ -18,6 +18,7 @@ from .onnx_upscale import upscale as onnx_upscale, model_path, configured_scale
 from .fsrcnn import upscale as fsrcnn_upscale, model_path as fsrcnn_model_path, available as fsrcnn_available
 from .espcn import upscale as espcn_upscale, available as espcn_available
 from .version import VERSION
+from .edition import community_manifest
 
 app = FastAPI(title="Lumqenix API", version=VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"], allow_methods=["*"], allow_headers=["*"])
@@ -35,9 +36,13 @@ def status():
         onnx_ready = model_path() is not None and configured_scale() in (2, 4)
     except ValueError:
         onnx_ready = False
-    return {"status":"ok", "version": VERSION, "hardware":detect_hardware(), "ai_model_configured":onnx_ready,
+    return {"status":"ok", "edition": "community", "edition_api_contract": 1, "version": VERSION, "hardware":detect_hardware(), "ai_model_configured":onnx_ready,
             "fsrcnn_available":fsrcnn_available(), "espcn_available":espcn_available(),
             "ffmpeg_available":bool(shutil.which("ffmpeg") and shutil.which("ffprobe")), "presets":sorted(PRESETS), "lite_mode": True, "lite_max_output_pixels":LITE_MAX_PIXELS}
+
+@app.get("/api/edition")
+def edition():
+    return community_manifest()
 
 @app.get("/api/brand")
 def brand():
