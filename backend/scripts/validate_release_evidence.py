@@ -2,7 +2,7 @@
 
 Usage:
   python scripts/validate_release_evidence.py --performance pretrained-cpu-benchmark.json \
-      --quality pretrained-quality.json --api cpu-benchmark.json
+      --quality pretrained-quality.json --quality-edges pretrained-quality-edges.json \\\n      --quality-smooth pretrained-quality-smooth.json --api cpu-benchmark.json
 
 This gate checks evidence completeness and 4 GiB process budgets, not that
 models outperform bicubic or preserve identity. Those require external criteria.
@@ -110,6 +110,18 @@ def validate_scene_bundle(performance, reports, api):
             execution = entry.get("execution", {})
             if execution.get("status") != "ok":
                 raise EvidenceError(f"{scene}/{name}: missing real-model execution")
+            if execution.get("model") != name:
+                raise EvidenceError(f"{scene}/{name}: wrong worker model identity")
+            if execution.get("input_dimensions") != [128, 128] or execution.get("output_dimensions") != [256, 256]:
+                raise EvidenceError(f"{scene}/{name}: worker image dimensions mismatch")
+            positive(execution.get("max_rss_bytes"), f"{scene}/{name} peak RSS")
+            if execution["max_rss_bytes"] >= 4 * 1024 ** 3:
+                raise EvidenceError(f"{scene}/{name}: process exceeds 4 GiB RSS")
+            warm = execution.get("warm_seconds")
+            if not isinstance(warm, list) or not warm:
+                raise EvidenceError(f"{scene}/{name}: missing warm timing evidence")
+            for duration in warm:
+                positive(duration, f"{scene}/{name} warm timing")
             model_hash = performance.get(name, {}).get("model_sha256")
             if execution.get("model_sha256") != model_hash:
                 raise EvidenceError(f"{scene}/{name}: model hash mismatch")
@@ -162,20 +174,15 @@ def main():
     parser.add_argument("--performance", type=Path, required=True)
     parser.add_argument("--quality", type=Path, required=True)
     parser.add_argument("--api", type=Path, required=True)
-    parser.add_argument("--quality-edges", type=Path)
-    parser.add_argument("--quality-smooth", type=Path)
+    parser.add_argument("--quality-edges", type=Path, required=True)
+    parser.add_argument("--quality-smooth", type=Path, required=True)
     args = parser.parse_args()
     try:
         documents = [json.loads(path.read_text()) for path in (args.performance, args.quality, args.api)]
-        if args.quality_edges or args.quality_smooth:
-            if not (args.quality_edges and args.quality_smooth):
-                raise EvidenceError("Both additional quality scenes are required")
-            reports = {"textures": documents[1],
-                       "edges": json.loads(args.quality_edges.read_text()),
-                       "smooth": json.loads(args.quality_smooth.read_text())}
-            result = validate_scene_bundle(documents[0], reports, documents[2])
-        else:
-            result = validate(*documents)
+        reports = {"textures": documents[1],
+                   "edges": json.loads(args.quality_edges.read_text()),
+                   "smooth": json.loads(args.quality_smooth.read_text())}
+        result = validate_scene_bundle(documents[0], reports, documents[2])
         print(json.dumps(result, indent=2))
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.exit(1, f"Release evidence gate failed: {exc}\n")
