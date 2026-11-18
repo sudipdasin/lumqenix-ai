@@ -24,7 +24,11 @@ jobs:
       - name: Install source preview without root
         run: bash scripts/install-linux.sh
       - name: Install test tools
-        run: .venv/bin/python -m pip install pytest httpx onnxruntime onnx opencv-contrib-python-headless
+        run: |
+          .venv/bin/python -m pip install pytest httpx onnxruntime onnx
+          .venv/bin/python -m pip uninstall -y opencv-python-headless
+          .venv/bin/python -m pip install 'opencv-contrib-python-headless>=4.9,<5'
+          .venv/bin/python -m pip check
       - name: Run backend regression suite
         run: |
           cd backend
