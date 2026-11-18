@@ -159,6 +159,8 @@ jobs:
           name: pretrained-quality-benchmark
           path: |
             backend/pretrained-quality.json
+            backend/pretrained-quality-edges.json
+            backend/pretrained-quality-smooth.json
             backend/pretrained-quality-manifest.json
             /tmp/lumqenix-quality/reference-hr.png
             /tmp/lumqenix-quality/input-lr.png
@@ -299,4 +301,6 @@ jobs:
           python backend/scripts/validate_release_evidence.py \
             --performance /tmp/lumqenix-evidence/pretrained-cpu-benchmark.json \
             --quality /tmp/lumqenix-evidence/pretrained-quality.json \
+            --quality-edges /tmp/lumqenix-evidence/pretrained-quality-edges.json \
+            --quality-smooth /tmp/lumqenix-evidence/pretrained-quality-smooth.json \
             --api /tmp/lumqenix-evidence/cpu-benchmark.json
