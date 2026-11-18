@@ -70,6 +70,12 @@ Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain
 - Add `validate_scene_bundle` to verify all six model-scene combinations, expected dimensions, consistent model hashes, finite reconstruction metrics and scene-specific bicubic baselines. Add eight regression cases including missing-scene and tampered-evidence rejection.
 - **Verification status:** changes committed; GitHub Actions results not yet confirmed. This checks measurement integrity, not perceptual superiority or face identity.
 
+## Unreleased — Turbo evidence comparison report (2026-11-18)
+- Extend release-evidence validation with an explicit six-row model-by-scene comparison of pretrained FSRCNN/ESPCN reconstruction versus bicubic, including signed MAE improvements and PSNR deltas. Negative results remain visible and are not disguised as successes.
+- Require low-resolution reference dimensions in the primary evidence gate; add three regression tests for six-way summary, negative improvement, and missing dimensions.
+- Persist the combined release evidence JSON as a dedicated CI artifact; make artifact discovery use the GitHub Actions glob matching the benchmark artifact names.
+- **Validation status:** code committed; actual full GitHub Actions execution and model comparison numbers remain unverified. No release promotion.
+
 ## Unreleased — Multi-scene pretrained quality evaluation (2026-11-17)
 - Extend deterministic paired-reference quality evaluation from one texture scene to three independent scenes: textures, hard edges, and smooth gradients. All use genuine pretrained FSRCNN and ESPCN inference in the Python 3.12 neural CI lane.
 - Upload separate machine-readable quality reports for each scene. Add two tests for deterministic scene differences and rejection of unsupported scene identifiers.
