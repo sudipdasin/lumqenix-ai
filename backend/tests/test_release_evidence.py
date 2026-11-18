@@ -136,3 +136,14 @@ def test_scene_worker_evidence_is_checked_independently(mutate):
     mutate(*documents)
     with pytest.raises(EvidenceError):
         validate_scene_bundle(*documents)
+
+
+@pytest.mark.parametrize("scene", ["edges", "smooth"])
+@pytest.mark.parametrize("invalid", [float("nan"), float("inf"), -float("inf"), True, "27.3"])
+def test_nontexture_bicubic_psnr_must_be_finite_numeric(scene, invalid):
+    performance, reports, api = good_scene_bundle()
+    reports[scene]["baseline_bicubic"]["psnr_rgb_db"] = invalid
+    for model in ("fsrcnn", "espcn"):
+        reports[scene]["models"][model]["quality"]["baseline_metrics"]["psnr_rgb_db"] = invalid
+    with pytest.raises(EvidenceError):
+        validate_scene_bundle(performance, reports, api)
