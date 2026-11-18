@@ -71,3 +71,30 @@ def test_normal_declared_frame_count_is_accepted():
 
 def test_missing_declared_frame_count_is_accepted():
     validate_video_workload({"avg_frame_rate": "24/1", "nb_frames": "N/A"}, 5, 640 * 480)
+
+
+def test_ffprobe_query_includes_declared_frame_count():
+    """Guard the endpoint wiring: nb_frames must reach workload preflight."""
+    from pathlib import Path
+    import ast
+
+    source = (Path(__file__).resolve().parents[1] / "app" / "main.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)
+             and isinstance(node.func, ast.Attribute) and node.func.attr == "run"]
+    ffprobe_commands = []
+    for call in calls:
+        if not call.args or not isinstance(call.args[0], ast.List):
+            continue
+        elements = call.args[0].elts
+        if elements and isinstance(elements[0], ast.Constant) and elements[0].value == "ffprobe":
+            ffprobe_commands.append([item.value for item in elements if isinstance(item, ast.Constant)])
+    assert len(ffprobe_commands) == 1
+    args = ffprobe_commands[0]
+    entries = args[args.index("-show_entries") + 1]
+    assert "nb_frames" in entries.split(":")[0].split("=")[1].split(",")
+
+
+def test_declared_frame_count_rejected_even_when_fps_estimate_is_small():
+    with pytest.raises(OverflowError):
+        validate_video_workload({"avg_frame_rate": "1/1", "nb_frames": "1801"}, 1, 64 * 64)
