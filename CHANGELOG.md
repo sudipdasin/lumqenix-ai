@@ -70,6 +70,12 @@ Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain
 - Add `validate_scene_bundle` to verify all six model-scene combinations, expected dimensions, consistent model hashes, finite reconstruction metrics and scene-specific bicubic baselines. Add eight regression cases including missing-scene and tampered-evidence rejection.
 - **Verification status:** changes committed; GitHub Actions results not yet confirmed. This checks measurement integrity, not perceptual superiority or face identity.
 
+## Unreleased — Strict multi-scene memory evidence gate (2026-11-18)
+- Make all three synthetic reconstruction scenes mandatory in the release-evidence CLI, eliminating the optional single-scene bypass.
+- Validate every individual pretrained model execution for correct model identity, LR/HR dimensions, finite warm timings, and peak RSS below 4 GiB across all six scene/model combinations. Add five negative regression cases.
+- GitHub combined commit status currently reports a CircleCI Pipeline `error` context; no GitHub Actions workflow runs were returned by the available commit-run lookup. This is not a passing release signal and requires CI investigation.
+- **Validation:** changes committed; full suite and real-model runs not independently verified. No release promotion.
+
 ## Unreleased — Turbo evidence comparison report (2026-11-18)
 - Extend release-evidence validation with an explicit six-row model-by-scene comparison of pretrained FSRCNN/ESPCN reconstruction versus bicubic, including signed MAE improvements and PSNR deltas. Negative results remain visible and are not disguised as successes.
 - Require low-resolution reference dimensions in the primary evidence gate; add three regression tests for six-way summary, negative improvement, and missing dimensions.
