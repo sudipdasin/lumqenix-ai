@@ -1,5 +1,8 @@
 # Lumqenix AI — Milestone 1 (CPU baseline)
 
+> **Public beta preview:** The experimental v0.3.0-rc.1 source installer, Linux launcher, and beta feedback template are available on the [preview branch](https://github.com/sudipdasin/lumqenix-ai/tree/preview/v0.3.0-rc.1-beta). [Download the preview source ZIP](https://github.com/sudipdasin/lumqenix-ai/archive/refs/heads/preview/v0.3.0-rc.1-beta.zip). This is not a certified binary or stable major release; CI verification is outstanding. The private Pro edition is not included.
+
+
 A locally runnable prototype for image and video enhancement. **This release does not contain a GAN, learned upscaler, temporal AI restoration, or true HDR encoding.** It uses conventional Pillow/OpenCV image filters, Lanczos scaling, and FFmpeg video filters. Branding is provisional and centralized in `config/brand.json`.
 
 ## Requirements
