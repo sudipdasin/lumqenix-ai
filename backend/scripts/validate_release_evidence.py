@@ -82,15 +82,75 @@ def validate(performance, quality, api):
             "quality_claim": "measurement only; no superiority or facial-fidelity claim"}
 
 
+
+SCENES = ("textures", "edges", "smooth")
+
+
+def validate_scene_bundle(performance, reports, api):
+    """Require all three independent real-model scenes, not just textures."""
+    if set(reports) != set(SCENES):
+        raise EvidenceError(f"Expected quality scenes {SCENES}, received {sorted(reports)}")
+    baseline_result = validate(performance, reports["textures"], api)
+    for scene in SCENES:
+        report = reports[scene]
+        expected = f"deterministic-synthetic-{scene}-v1"
+        if report.get("dataset") != expected:
+            raise EvidenceError(f"{scene}: unexpected dataset identifier")
+        if report.get("reference_dimensions") != [256, 256]:
+            raise EvidenceError(f"{scene}: invalid HR dimensions")
+        if report.get("low_resolution_dimensions") != [128, 128]:
+            raise EvidenceError(f"{scene}: invalid LR dimensions")
+        baseline = report.get("baseline_bicubic", {})
+        positive(baseline.get("mae_rgb"), f"{scene} bicubic MAE")
+        positive(baseline.get("mse_rgb"), f"{scene} bicubic MSE")
+        for name in ("fsrcnn", "espcn"):
+            entry = report.get("models", {}).get(name, {})
+            execution = entry.get("execution", {})
+            if execution.get("status") != "ok":
+                raise EvidenceError(f"{scene}/{name}: missing real-model execution")
+            model_hash = performance.get(name, {}).get("model_sha256")
+            if execution.get("model_sha256") != model_hash:
+                raise EvidenceError(f"{scene}/{name}: model hash mismatch")
+            quality = entry.get("quality", {})
+            if quality.get("dimensions") != [256, 256]:
+                raise EvidenceError(f"{scene}/{name}: invalid prediction dimensions")
+            for label in ("prediction_metrics", "baseline_metrics"):
+                m = quality.get(label, {})
+                for key in ("mae_rgb", "mse_rgb"):
+                    value = m.get(key)
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+                        raise EvidenceError(f"{scene}/{name}/{label}: invalid {key}")
+                psnr = m.get("psnr_rgb_db")
+                if psnr is not None and (isinstance(psnr, bool) or not isinstance(psnr, (int, float)) or not math.isfinite(psnr)):
+                    raise EvidenceError(f"{scene}/{name}/{label}: invalid PSNR")
+            for key in ("mae_rgb", "mse_rgb", "psnr_rgb_db"):
+                if quality["baseline_metrics"][key] != baseline.get(key):
+                    raise EvidenceError(f"{scene}/{name}: baseline {key} mismatch")
+    baseline_result["scenes_verified"] = list(SCENES)
+    baseline_result["model_scene_combinations"] = len(SCENES) * 2
+    return baseline_result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--performance", type=Path, required=True)
     parser.add_argument("--quality", type=Path, required=True)
     parser.add_argument("--api", type=Path, required=True)
+    parser.add_argument("--quality-edges", type=Path)
+    parser.add_argument("--quality-smooth", type=Path)
     args = parser.parse_args()
     try:
         documents = [json.loads(path.read_text()) for path in (args.performance, args.quality, args.api)]
-        print(json.dumps(validate(*documents), indent=2))
+        if args.quality_edges or args.quality_smooth:
+            if not (args.quality_edges and args.quality_smooth):
+                raise EvidenceError("Both additional quality scenes are required")
+            reports = {"textures": documents[1],
+                       "edges": json.loads(args.quality_edges.read_text()),
+                       "smooth": json.loads(args.quality_smooth.read_text())}
+            result = validate_scene_bundle(documents[0], reports, documents[2])
+        else:
+            result = validate(*documents)
+        print(json.dumps(result, indent=2))
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.exit(1, f"Release evidence gate failed: {exc}\n")
 
