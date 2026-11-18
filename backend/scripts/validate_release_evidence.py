@@ -43,6 +43,8 @@ def validate(performance, quality, api):
     baseline_psnr = baseline.get("psnr_rgb_db")
     if baseline_psnr is not None and (isinstance(baseline_psnr, bool) or not isinstance(baseline_psnr, (int, float)) or not math.isfinite(baseline_psnr)):
         raise EvidenceError("bicubic PSNR: expected finite numeric value")
+    if quality.get("low_resolution_dimensions") != [128, 128]:
+        raise EvidenceError("Unexpected LR reference dimensions")
     for name in ("fsrcnn", "espcn"):
         perf = performance.get(name, {})
         model = quality.get("models", {}).get(name, {})
@@ -127,8 +129,32 @@ def validate_scene_bundle(performance, reports, api):
                 if quality["baseline_metrics"][key] != baseline.get(key):
                     raise EvidenceError(f"{scene}/{name}: baseline {key} mismatch")
     baseline_result["scenes_verified"] = list(SCENES)
+    baseline_result["quality_summary"] = summarize_quality(reports)
     baseline_result["model_scene_combinations"] = len(SCENES) * 2
     return baseline_result
+
+
+
+def summarize_quality(reports):
+    """Record objective differences without imposing unsupported superiority claims."""
+    rows = []
+    for scene in SCENES:
+        report = reports[scene]
+        baseline = report["baseline_bicubic"]
+        for model in ("fsrcnn", "espcn"):
+            predicted = report["models"][model]["quality"]["prediction_metrics"]
+            improvement = round(baseline["mae_rgb"] - predicted["mae_rgb"], 6)
+            baseline_psnr = baseline["psnr_rgb_db"]
+            prediction_psnr = predicted["psnr_rgb_db"]
+            psnr_delta = (round(prediction_psnr - baseline_psnr, 6)
+                          if baseline_psnr is not None and prediction_psnr is not None else None)
+            rows.append({
+                "scene": scene, "model": model,
+                "mae_improvement_vs_bicubic": improvement,
+                "psnr_delta_db_vs_bicubic": psnr_delta,
+                "beats_bicubic_on_mae": improvement > 0,
+            })
+    return rows
 
 
 def main():
