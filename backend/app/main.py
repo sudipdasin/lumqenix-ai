@@ -19,6 +19,7 @@ from .fsrcnn import upscale as fsrcnn_upscale, model_path as fsrcnn_model_path, 
 from .espcn import upscale as espcn_upscale, available as espcn_available
 from .version import VERSION
 from .edition import community_manifest
+from .video_limits import validate_video_workload
 
 app = FastAPI(title="Lumqenix API", version=VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"], allow_methods=["*"], allow_headers=["*"])
@@ -225,7 +226,7 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
                 raise HTTPException(503, "Video staging failed") from exc
             try:
                 probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0",
-                                        "-show_entries", "stream=width,height,duration:format=duration",
+                                        "-show_entries", "stream=width,height,duration,avg_frame_rate,r_frame_rate:format=duration",
                                         "-of", "json", str(src)], capture_output=True, text=True, timeout=20)
                 if probe.returncode != 0:
                     raise HTTPException(422, "Could not read video stream")
@@ -244,6 +245,10 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
                 output_height = (height * scale + 1) // 2 * 2
                 if output_width * output_height > LITE_MAX_PIXELS:
                     raise HTTPException(413, "Lite mode output limit: 12 million pixels")
+                try:
+                    validate_video_workload(stream, duration, output_width * output_height)
+                except OverflowError as exc:
+                    raise HTTPException(413, str(exc)) from exc
             except (ValueError, TypeError, KeyError, IndexError, AttributeError, OverflowError):
                 raise HTTPException(422, "Invalid video dimensions or duration")
             except subprocess.TimeoutExpired:
