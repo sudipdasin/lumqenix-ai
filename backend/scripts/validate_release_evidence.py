@@ -105,6 +105,11 @@ def validate_scene_bundle(performance, reports, api):
         baseline = report.get("baseline_bicubic", {})
         positive(baseline.get("mae_rgb"), f"{scene} bicubic MAE")
         positive(baseline.get("mse_rgb"), f"{scene} bicubic MSE")
+        scene_psnr = baseline.get("psnr_rgb_db")
+        if (scene_psnr is not None and
+                (isinstance(scene_psnr, bool) or not isinstance(scene_psnr, (int, float)) or
+                 not math.isfinite(scene_psnr))):
+            raise EvidenceError(f"{scene}: invalid bicubic PSNR")
         for name in ("fsrcnn", "espcn"):
             entry = report.get("models", {}).get(name, {})
             execution = entry.get("execution", {})
