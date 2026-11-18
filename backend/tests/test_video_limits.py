@@ -111,3 +111,30 @@ def test_untrusted_frame_rate_rejected_before_fraction_parsing(rate):
 @pytest.mark.parametrize("rate", [24, 29.97, "30000/1001"])
 def test_normal_numeric_frame_rate_metadata_remains_supported(rate):
     validate_video_workload({"avg_frame_rate": rate}, 1, 640 * 480)
+
+
+def test_matroska_codec_timebase_does_not_reject_short_valid_video():
+    # Reproduces real FFprobe metadata from FFV1/Matroska at 2 FPS.
+    validate_video_workload({"avg_frame_rate": "2/1", "r_frame_rate": "1000/1"}, 0.5, 34 * 26)
+
+
+def test_matroska_nominal_rate_is_conservatively_capped_for_budget():
+    # The nominal rate is not discarded: 240 FPS * 10 s exceeds 1800 frames.
+    with pytest.raises(OverflowError, match="Video workload"):
+        validate_video_workload({"avg_frame_rate": "2/1", "r_frame_rate": "1000/1"}, 10, 34 * 26)
+
+
+def test_unsupported_nominal_rate_without_valid_average_fails_closed():
+    with pytest.raises(ValueError, match="Unsupported video frame rate"):
+        validate_video_workload({"r_frame_rate": "1000/1"}, 0.5, 34 * 26)
+
+
+@pytest.mark.parametrize("bad_nominal", [False, "0/1", "-2/1", "9" * 10000, object()])
+def test_invalid_nominal_metadata_cannot_hide_behind_average(bad_nominal):
+    with pytest.raises(ValueError):
+        validate_video_workload({"avg_frame_rate": "2/1", "r_frame_rate": bad_nominal}, 0.5, 34 * 26)
+
+
+def test_actual_declared_frames_still_override_optimistic_average():
+    with pytest.raises(OverflowError, match="Video workload"):
+        validate_video_workload({"avg_frame_rate": "2/1", "r_frame_rate": "1000/1", "nb_frames": "1801"}, 0.5, 34 * 26)

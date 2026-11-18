@@ -12,7 +12,7 @@ MAX_ESTIMATED_FRAMES = 1800
 MAX_SUPPORTED_FPS = 240
 
 
-def _parse_rate(value):
+def _parse_rate(value, *, clamp_nominal=False):
     if value is None or value == "" or value == "N/A" or value == "0/0":
         return None
     # ffprobe metadata is untrusted: bound parsing cost and reject booleans,
@@ -26,7 +26,14 @@ def _parse_rate(value):
         fps = Fraction(raw)
     except (TypeError, ValueError, ZeroDivisionError, OverflowError) as exc:
         raise ValueError("Invalid video frame rate") from exc
-    if fps <= 0 or fps > MAX_SUPPORTED_FPS:
+    if fps <= 0:
+        raise ValueError("Unsupported video frame rate")
+    if fps > MAX_SUPPORTED_FPS:
+        if clamp_nominal:
+            # Matroska/FFV1 can advertise a 1000 fps codec timebase even
+            # though average frame rate is 2 fps. Budget the supported
+            # maximum when an independent valid average is present.
+            return Fraction(MAX_SUPPORTED_FPS, 1)
         raise ValueError("Unsupported video frame rate")
     return fps
 
@@ -43,7 +50,9 @@ def validate_video_workload(stream: dict, duration: float, output_pixels: int) -
         raise ValueError("Invalid video duration")
     if isinstance(output_pixels, bool) or not isinstance(output_pixels, int) or output_pixels <= 0:
         raise ValueError("Invalid output pixel count")
-    rates = [_parse_rate(stream.get(key)) for key in ("avg_frame_rate", "r_frame_rate")]
+    average_rate = _parse_rate(stream.get("avg_frame_rate"))
+    nominal_rate = _parse_rate(stream.get("r_frame_rate"), clamp_nominal=average_rate is not None)
+    rates = [average_rate, nominal_rate]
     known = [rate for rate in rates if rate is not None]
     fps = max(known) if known else Fraction(MAX_SUPPORTED_FPS, 1)
     # Early bounds avoid huge multiplications for untrusted metadata.
