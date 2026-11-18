@@ -12,6 +12,7 @@ def good_documents():
     quality = {
         "dataset": "deterministic-synthetic-textures-v1",
         "reference_dimensions": [256, 256],
+        "low_resolution_dimensions": [128, 128],
         "baseline_bicubic": {"mae_rgb": 10.0, "mse_rgb": 120.0, "psnr_rgb_db": 27.3},
         "models": {},
     }
@@ -90,3 +91,32 @@ def test_multiscene_evidence_fails_closed(mutate):
     mutate(*documents)
     with pytest.raises(EvidenceError):
         validate_scene_bundle(*documents)
+
+
+def test_quality_summary_has_six_explicit_comparisons():
+    result = validate_scene_bundle(*good_scene_bundle())
+    rows = result["quality_summary"]
+    assert len(rows) == 6
+    assert {(row["scene"], row["model"]) for row in rows} == {
+        (scene, model) for scene in ("textures", "edges", "smooth")
+        for model in ("fsrcnn", "espcn")
+    }
+    assert all(row["mae_improvement_vs_bicubic"] == 1 for row in rows)
+    assert all(row["psnr_delta_db_vs_bicubic"] == pytest.approx(0.8) for row in rows)
+
+
+def test_quality_summary_reports_worse_than_bicubic_without_hiding_it():
+    performance, reports, api = good_scene_bundle()
+    reports["edges"]["models"]["fsrcnn"]["quality"]["prediction_metrics"]["mae_rgb"] = 15.0
+    result = validate_scene_bundle(performance, reports, api)
+    row = next(row for row in result["quality_summary"]
+               if row["scene"] == "edges" and row["model"] == "fsrcnn")
+    assert row["mae_improvement_vs_bicubic"] == -5.0
+    assert row["beats_bicubic_on_mae"] is False
+
+
+def test_missing_low_resolution_dimensions_rejected():
+    performance, quality, api = good_documents()
+    quality.pop("low_resolution_dimensions", None)
+    with pytest.raises(EvidenceError):
+        validate(performance, quality, api)
