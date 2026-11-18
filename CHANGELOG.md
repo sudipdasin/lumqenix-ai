@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.0-rc.1 — Beta preview (2026-11-18)
+- Experimental preview branch `preview/v0.3.0-rc.1-beta` created from the reliability development branch; backend version set to `0.3.0-rc.1`.
+- Includes CPU-first image/video enhancement, optional pretrained FSRCNN/ESPCN inference, ONNX tiling, reproducible quality comparisons, and CI release-evidence validation.
+- **Not production certified:** the available GitHub status reported CircleCI `error` for recent development commits, and the complete release gates have not been independently confirmed passing. Model quality superiority, face fidelity, and 4 GiB performance are not certified.
+- Preview publication does not merge into `main` or certify a stable release. Run only in a trusted local testing environment.
+
+
 ## Unreleased — Reject stale pretrained benchmark output (2026-11-17)
 - Remove prior model output before launching each worker, preventing a previous PNG from being accepted as fresh evidence.
 - Report output cleanup errors per model and continue independent model evaluation.
