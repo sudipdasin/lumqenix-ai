@@ -280,7 +280,7 @@ jobs:
 
   release-evidence:
     name: Cross-job real-model evidence gate
-    needs: [test, cpu-benchmark]
+    needs: [test, frontend, video-integration, cpu-benchmark]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
