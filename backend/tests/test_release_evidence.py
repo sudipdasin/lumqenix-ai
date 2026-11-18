@@ -20,7 +20,9 @@ def good_documents():
         perf[name] = {"status": "ok", "model_sha256": hash_value,
                       "max_rss_bytes": 100 * 1024 ** 2, "warm_seconds": [0.2]}
         quality["models"][name] = {
-            "execution": {"status": "ok", "model_sha256": hash_value},
+            "execution": {"status": "ok", "model": name, "model_sha256": hash_value,
+                          "input_dimensions": [128, 128], "output_dimensions": [256, 256],
+                          "max_rss_bytes": 100 * 1024 ** 2, "warm_seconds": [0.2]},
             "quality": {"dimensions": [256, 256],
                         "prediction_metrics": {"mae_rgb": 9.0, "mse_rgb": 100.0, "psnr_rgb_db": 28.1},
                         "baseline_metrics": {"mae_rgb": 10.0, "mse_rgb": 120.0, "psnr_rgb_db": 27.3}},
@@ -120,3 +122,17 @@ def test_missing_low_resolution_dimensions_rejected():
     quality.pop("low_resolution_dimensions", None)
     with pytest.raises(EvidenceError):
         validate(performance, quality, api)
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda p, q, a: q["edges"]["models"]["fsrcnn"]["execution"].update(max_rss_bytes=4 * 1024 ** 3),
+    lambda p, q, a: q["smooth"]["models"]["espcn"]["execution"].update(warm_seconds=[]),
+    lambda p, q, a: q["textures"]["models"]["fsrcnn"]["execution"].update(model="espcn"),
+    lambda p, q, a: q["edges"]["models"]["espcn"]["execution"].update(output_dimensions=[128, 128]),
+    lambda p, q, a: q["smooth"]["models"]["fsrcnn"]["execution"].update(warm_seconds=[float("nan")]),
+])
+def test_scene_worker_evidence_is_checked_independently(mutate):
+    documents = list(deepcopy(good_scene_bundle()))
+    mutate(*documents)
+    with pytest.raises(EvidenceError):
+        validate_scene_bundle(*documents)
