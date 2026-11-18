@@ -98,3 +98,16 @@ def test_ffprobe_query_includes_declared_frame_count():
 def test_declared_frame_count_rejected_even_when_fps_estimate_is_small():
     with pytest.raises(OverflowError):
         validate_video_workload({"avg_frame_rate": "1/1", "nb_frames": "1801"}, 1, 64 * 64)
+
+
+@pytest.mark.parametrize("rate", [
+    True, False, "9" * 10000, "١/٢", object(),
+])
+def test_untrusted_frame_rate_rejected_before_fraction_parsing(rate):
+    with pytest.raises(ValueError, match="Invalid video frame rate"):
+        validate_video_workload({"avg_frame_rate": rate}, 1, 640 * 480)
+
+
+@pytest.mark.parametrize("rate", [24, 29.97, "30000/1001"])
+def test_normal_numeric_frame_rate_metadata_remains_supported(rate):
+    validate_video_workload({"avg_frame_rate": rate}, 1, 640 * 480)
