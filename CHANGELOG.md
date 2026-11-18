@@ -65,6 +65,11 @@
 
 Versions follow Semantic Versioning: MAJOR.MINOR.PATCH. Until 1.0.0, APIs remain experimental.
 
+## Unreleased — Turbo multi-scene release evidence gate (2026-11-18)
+- Close a release-validation gap: all three real-model quality JSON artifacts (textures, edges, smooth) are now uploaded and required by the cross-job release gate. Previously only the texture report was checked, so missing edge/gradient evidence could go unnoticed.
+- Add `validate_scene_bundle` to verify all six model-scene combinations, expected dimensions, consistent model hashes, finite reconstruction metrics and scene-specific bicubic baselines. Add eight regression cases including missing-scene and tampered-evidence rejection.
+- **Verification status:** changes committed; GitHub Actions results not yet confirmed. This checks measurement integrity, not perceptual superiority or face identity.
+
 ## Unreleased — Multi-scene pretrained quality evaluation (2026-11-17)
 - Extend deterministic paired-reference quality evaluation from one texture scene to three independent scenes: textures, hard edges, and smooth gradients. All use genuine pretrained FSRCNN and ESPCN inference in the Python 3.12 neural CI lane.
 - Upload separate machine-readable quality reports for each scene. Add two tests for deterministic scene differences and rejection of unsupported scene identifiers.
