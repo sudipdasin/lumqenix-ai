@@ -48,3 +48,26 @@ def test_unknown_rate_does_not_bypass_limits():
 def test_bad_second_rate_cannot_hide_behind_valid_first_rate():
     with pytest.raises(ValueError):
         validate_video_workload({'avg_frame_rate': '24/1', 'r_frame_rate': 'broken'}, 1, 100)
+
+@pytest.mark.parametrize("count", ["999999999999999999999", "-1", "1.5", "0", "12x", True, 1.5])
+def test_invalid_declared_frame_count(count):
+    with pytest.raises(ValueError):
+        validate_video_workload({"avg_frame_rate": "24/1", "nb_frames": count}, 1, 100)
+
+
+def test_vfr_declared_frames_cannot_bypass_frame_budget():
+    with pytest.raises(OverflowError):
+        validate_video_workload({"avg_frame_rate": "1/1", "nb_frames": "1801"}, 1, 100)
+
+
+def test_vfr_declared_frames_cannot_bypass_sample_budget():
+    with pytest.raises(OverflowError):
+        validate_video_workload({"avg_frame_rate": "1/1", "nb_frames": "1500"}, 1, 400000)
+
+
+def test_normal_declared_frame_count_is_accepted():
+    validate_video_workload({"avg_frame_rate": "24/1", "nb_frames": "120"}, 5, 640 * 480)
+
+
+def test_missing_declared_frame_count_is_accepted():
+    validate_video_workload({"avg_frame_rate": "24/1", "nb_frames": "N/A"}, 5, 640 * 480)

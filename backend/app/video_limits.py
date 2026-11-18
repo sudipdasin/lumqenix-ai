@@ -45,3 +45,19 @@ def validate_video_workload(stream: dict, duration: float, output_pixels: int) -
     frames = math.ceil(float(fps) * duration)
     if frames > MAX_ESTIMATED_FRAMES or frames * output_pixels > MAX_ESTIMATED_OUTPUT_SAMPLES:
         raise OverflowError("Video workload exceeds Lite CPU budget")
+    # A container can advertise a low average FPS while reporting many actual
+    # frames (variable-frame-rate content or inconsistent metadata). Treat the
+    # explicit frame count as an additional lower bound, never a replacement for
+    # the conservative FPS-derived estimate.
+    declared_frames = stream.get("nb_frames")
+    if declared_frames not in (None, "", "N/A"):
+        if isinstance(declared_frames, bool) or not isinstance(declared_frames, (int, str)):
+            raise ValueError("Invalid video frame count")
+        digits = str(declared_frames)
+        if not digits.isascii() or not digits.isdecimal() or len(digits) > 12:
+            raise ValueError("Invalid video frame count")
+        declared = int(digits)
+        if declared <= 0:
+            raise ValueError("Invalid video frame count")
+        if declared > MAX_ESTIMATED_FRAMES or declared * output_pixels > MAX_ESTIMATED_OUTPUT_SAMPLES:
+            raise OverflowError("Video workload exceeds Lite CPU budget")
