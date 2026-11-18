@@ -226,7 +226,7 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
                 raise HTTPException(503, "Video staging failed") from exc
             try:
                 probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0",
-                                        "-show_entries", "stream=width,height,duration,avg_frame_rate,r_frame_rate:format=duration",
+                                        "-show_entries", "stream=width,height,duration,avg_frame_rate,r_frame_rate,nb_frames:format=duration",
                                         "-of", "json", str(src)], capture_output=True, text=True, timeout=20)
                 if probe.returncode != 0:
                     raise HTTPException(422, "Could not read video stream")
