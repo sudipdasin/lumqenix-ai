@@ -218,3 +218,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Commercial/proprietary edition source and secrets (separate private repo)
+/proprietary/
+/private/
+/premium/
+/commercial/
+/secrets/
+*.p12
+*.pfx

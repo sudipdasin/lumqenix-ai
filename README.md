@@ -1,6 +1,26 @@
-# Lumqenix AI — Studio Lite
+# Lumqenix AI — Community (Studio Lite)
 
-Local image and video enhancement for CPU use. Current build: **0.3.0-dev.1**, an evidence-backed development build, not a production release candidate. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
+Local image and video enhancement for CPU use. Current build: **0.3.0-dev.7**, an evidence-backed development build, not a production release candidate. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
+
+## Editions and open-source participation
+
+This repository contains the **Community edition**, licensed under the
+[MIT License](LICENSE). Its free features run locally without an account or
+Pro license. The planned commercial **Pro edition** uses a separate
+**private** repository and consumes the Community core through a versioned
+contract. Private algorithms, model assets, payment and signing secrets must
+never be placed in public source or history.
+
+The machine-readable `GET /api/edition` endpoint reports Community edition
+identity and available-in-source capabilities (not whether optional neural
+weights are installed). See [the dual-edition architecture](docs/COMMUNITY_PRO_STRATEGY.md),
+[contributing](CONTRIBUTING.md), [security](SECURITY.md),
+[third-party notices](docs/THIRD_PARTY_NOTICES.md), and
+[publication checklist](docs/COMMUNITY_RELEASE_CHECKLIST.md).
+
+This GitHub repository currently remains **private** while the full-history,
+dependency and release-readiness audits are completed. There is no published
+Pro build or commercial entitlement system.
 
 ## Engines
 
