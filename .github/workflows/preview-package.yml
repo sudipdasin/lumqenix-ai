@@ -24,7 +24,7 @@ jobs:
       - name: Install source preview without root
         run: bash scripts/install-linux.sh
       - name: Install test tools
-        run: .venv/bin/python -m pip install pytest httpx
+        run: .venv/bin/python -m pip install pytest httpx onnxruntime onnx opencv-contrib-python-headless
       - name: Run backend regression suite
         run: |
           cd backend
@@ -65,10 +65,7 @@ jobs:
         run: |
           .venv/bin/python - <<'PY'
           import io
-          import urllib.request
           from PIL import Image
-          from urllib.error import HTTPError
-          from httpx import Client
           import sys
           sys.path.insert(0, 'backend')
           from fastapi.testclient import TestClient
@@ -83,6 +80,10 @@ jobs:
               assert output.format == 'PNG'
               assert output.size == (32, 32)
           PY
+      - name: Verify installed application has no accidental public bind
+        run: |
+          ! grep -Eq -- '--host (0\\.0\\.0\\.0|::)' scripts/run-linux.sh
+          ! grep -Eq -- '--bind (0\\.0\\.0\\.0|::)' scripts/run-linux.sh
       - name: Archive source preview for download
         run: |
           git archive --format=zip --output=/tmp/lumqenix-community-v0.3.0-rc.1-source.zip HEAD
