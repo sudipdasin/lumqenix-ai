@@ -1,6 +1,6 @@
 # Lumqenix AI — Studio Lite
 
-Local image and video enhancement for CPU use. Current build: **0.3.0-dev.1**, an evidence-backed development build, not a production release candidate. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
+Local image and video enhancement for CPU use. Preview branch build: **0.3.0-rc.1 (beta preview)**. This is an **experimental, unverified release candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
 
 ## Engines
 
