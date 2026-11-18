@@ -107,7 +107,7 @@ Download a compatible pretrained model from its upstream project after reviewing
 ```bash
 mkdir -p "$HOME/.local/share/lumqenix/models"
 curl -fL "https://raw.githubusercontent.com/Saafke/FSRCNN_Tensorflow/master/models/FSRCNN_x2.pb" -o "$HOME/.local/share/lumqenix/models/FSRCNN_x2.pb"
-cd "/media/backup/IMPORTANT/PROJECTS/Lumqenix_AI/lumqenix-ai/backend"
+cd backend
 LUMQENIX_FSRCNN_MODEL="$HOME/.local/share/lumqenix/models/FSRCNN_x2.pb" \
   "$HOME/.venvs/lumqenix-fsrcnn/bin/python" -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
