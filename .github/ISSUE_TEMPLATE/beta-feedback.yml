@@ -1,0 +1,39 @@
+name: Beta feedback
+description: Report issues from the Lumqenix Community beta preview
+title: "[Beta] "
+labels: ["beta-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing Lumqenix Community. Please do not upload private images, faces, videos, access tokens or sensitive logs.
+  - type: dropdown
+    id: feature
+    attributes:
+      label: Feature
+      options: [Image enhancement, Video enhancement, FSRCNN, ESPCN, ONNX, Installer, User interface, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Describe steps using nonsensitive sample media.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual result
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: Linux distribution, Python version, RAM (no username or paths)
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized diagnostics (optional)
+      description: Remove personal paths, IPs, credentials, and private media before sharing.
