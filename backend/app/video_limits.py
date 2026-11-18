@@ -15,8 +15,15 @@ MAX_SUPPORTED_FPS = 240
 def _parse_rate(value):
     if value is None or value == "" or value == "N/A" or value == "0/0":
         return None
+    # ffprobe metadata is untrusted: bound parsing cost and reject booleans,
+    # non-ASCII digits and arbitrarily large rational numerators/denominators.
+    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+        raise ValueError("Invalid video frame rate")
+    raw = str(value)
+    if len(raw) > 64 or not raw.isascii():
+        raise ValueError("Invalid video frame rate")
     try:
-        fps = Fraction(str(value))
+        fps = Fraction(raw)
     except (TypeError, ValueError, ZeroDivisionError, OverflowError) as exc:
         raise ValueError("Invalid video frame rate") from exc
     if fps <= 0 or fps > MAX_SUPPORTED_FPS:
