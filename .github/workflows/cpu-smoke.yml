@@ -293,7 +293,7 @@ jobs:
       - name: Retrieve actual benchmark artifacts from completed jobs
         uses: actions/download-artifact@v4
         with:
-          pattern: '{pretrained-cpu-benchmark,pretrained-quality-benchmark,cpu-image-api-benchmark}'
+          pattern: '*benchmark*'
           merge-multiple: true
           path: /tmp/lumqenix-evidence
       - name: Reject missing, inconsistent, or over-budget evidence
@@ -303,4 +303,12 @@ jobs:
             --quality /tmp/lumqenix-evidence/pretrained-quality.json \
             --quality-edges /tmp/lumqenix-evidence/pretrained-quality-edges.json \
             --quality-smooth /tmp/lumqenix-evidence/pretrained-quality-smooth.json \
-            --api /tmp/lumqenix-evidence/cpu-benchmark.json
+            --api /tmp/lumqenix-evidence/cpu-benchmark.json > release-evidence.json
+          cat release-evidence.json
+      - name: Preserve release evidence and six-model comparison report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-gate
+          path: release-evidence.json
+          if-no-files-found: warn
