@@ -23,6 +23,12 @@ jobs:
           python-version: '3.12'
       - name: Install source preview without root
         run: bash scripts/install-linux.sh
+      - name: Install test tools
+        run: .venv/bin/python -m pip install pytest httpx
+      - name: Run backend regression suite
+        run: |
+          cd backend
+          ../.venv/bin/python -m pytest -q tests --junitxml=preview-pytest.xml
       - name: Validate backend dependencies and import
         run: |
           .venv/bin/python -m pip check
@@ -55,10 +61,39 @@ jobs:
           else:
               raise SystemExit('Beta startup smoke test failed')
           PY
+      - name: Test real image enhancement response
+        run: |
+          .venv/bin/python - <<'PY'
+          import io
+          import urllib.request
+          from PIL import Image
+          from urllib.error import HTTPError
+          from httpx import Client
+          import sys
+          sys.path.insert(0, 'backend')
+          from fastapi.testclient import TestClient
+          from app.main import app
+          image = Image.new('RGB', (16, 16), (120, 90, 70))
+          buf = io.BytesIO()
+          image.save(buf, format='PNG')
+          with TestClient(app) as client:
+              response = client.post('/api/enhance/image', data={'preset':'auto', 'scale':'2'}, files={'file':('test.png', buf.getvalue(), 'image/png')})
+          assert response.status_code == 200, response.text[:400]
+          with Image.open(io.BytesIO(response.content)) as output:
+              assert output.format == 'PNG'
+              assert output.size == (32, 32)
+          PY
       - name: Archive source preview for download
         run: |
           git archive --format=zip --output=/tmp/lumqenix-community-v0.3.0-rc.1-source.zip HEAD
           test -s /tmp/lumqenix-community-v0.3.0-rc.1-source.zip
+      - name: Upload beta regression results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumqenix-beta-pytest-results
+          path: backend/preview-pytest.xml
+          if-no-files-found: warn
       - name: Upload source preview ZIP
         uses: actions/upload-artifact@v4
         with:
