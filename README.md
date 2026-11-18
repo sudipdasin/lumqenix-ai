@@ -18,9 +18,10 @@ weights are installed). See [the dual-edition architecture](docs/COMMUNITY_PRO_S
 [third-party notices](docs/THIRD_PARTY_NOTICES.md), and
 [publication checklist](docs/COMMUNITY_RELEASE_CHECKLIST.md).
 
-This GitHub repository currently remains **private** while the full-history,
-dependency and release-readiness audits are completed. There is no published
-Pro build or commercial entitlement system.
+The Community GitHub repository is **public**. Its development branch is not
+a certified release candidate; full-history, dependency-rights, and artifact
+audits remain open. The separate **Pro repository is private**, but a finished
+commercial build and entitlement service are not yet available.
 
 ## Engines
 

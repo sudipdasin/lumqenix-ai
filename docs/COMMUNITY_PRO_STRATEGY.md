@@ -1,11 +1,13 @@
 # Lumqenix Community + Pro: repository and licensing strategy
 
-Status: architecture decision; **not** a claim that a Pro product, license, or public repository already exists.
+Status: Community is public; the separate private Pro repository exists with
+experimental Fidelity Guard code and private CI. No finished commercial
+product or validated installable Pro release is claimed.
 
 ## Non-negotiable separation
 
-- **Community repository:** `sudipdasin/lumqenix-ai` (currently PRIVATE; make public only after license, security and history audits). Community must be useful and independently installable. No license server or Pro account is needed for its core features.
-- **Pro repository (proposed):** `sudipdasin/lumqenix-pro`, PRIVATE from creation. Contains proprietary algorithms, premium UI, licensing client, private tests, private assets, commercial packaging and deployment. **Do not create a Pro directory or Pro branch in the public repository.**
+- **Community repository:** `sudipdasin/lumqenix-ai`, currently PUBLIC and MIT-licensed for original project source. The public history still needs a complete security/third-party rights audit. Community must be independently installable with no Pro license.
+- **Pro repository (existing):** `sudipdasin/lumqenix-pro`, confirmed PRIVATE. It contains experimental proprietary Fidelity Guard code, contract checks and private CI; paid UI, production licensing, models, and commercial installers are future work. **Never add Pro code to the public repository.**
 - One-way dependency: Pro consumes a **pinned, signed or SHA-verified Community release/tag**. Community must never import or depend on Pro. Private CI builds the Pro edition from its own source and the pinned Community dependency.
 - Do not blindly mirror private branches to public. Synchronize **public core changes upstream** through reviewed pull requests; consume the public core downstream through versioned tags and an automated dependency-update PR. Synchronization is of shared code, **not** of private-only commits or assets.
 - Both builds expose a clear edition name. Public downloads, issue tracker, documentation, SDK contracts, tests and release notes stay usable without Pro.
@@ -14,18 +16,17 @@ Status: architecture decision; **not** a claim that a Pro product, license, or p
 ## Repository topology
 
 ```text
-lumqenix-ai/                 Community source; public only after audit
+lumqenix-ai/                 PUBLIC Community source; audit before releases
   backend/ frontend/ config/ tests/ docs/
   scripts/check_edition_boundary.py
   .github/workflows/           Public CI, reproducible public release
-lumqenix-pro/                Separate private repository (to create)
-  pro_backend/               Proprietary processing engines
-  pro_frontend/              Pro-only workflows and UI
-  pro_models/                Private licensed resources (not in public Git)
-  licensing/                 Entitlement adapters (never signing keys)
-  packaging/                 Private installer and release pipeline
-  tests/                     Pro and Community compatibility suites
-  community.lock             Exact Community commit/tag and checksum
+lumqenix-pro/                Existing PRIVATE repo, no commercial release
+  pro_backend/               Experimental proprietary Fidelity Guard
+  tests/                     Private regression and compatibility tests
+  scripts/                   One-way Community pin/sync tools
+  community.lock             Exact pinned Community development commit
+  .github/workflows/         Private tests and reviewed update proposals
+  planned/                   Pro UI, licensing, models, packaging (not built)
 ```
 
 ## Product boundaries
@@ -41,7 +42,7 @@ lumqenix-pro/                Separate private repository (to create)
 1. Inventory all files and the **entire Git history** for secrets, PII, proprietary assets, and third-party rights. Removing a file in a later commit does not remove it from history.
 2. The Community development branch now has an MIT license for **original project source** and contributor/security policies. Before public distribution, audit provenance, all upstream dependencies and third-party assets; do not assume rights over third-party code or weights.
 3. Run `python scripts/check_edition_boundary.py` in Community CI before packaging and publication. This guard checks tracked paths only; also use secret scanning, license scanning, artifact inspection, and history review.
-4. Create the Pro repository **private** and restrict collaborators, tokens, CI environments and artifact retention. Never place private assets in public forks or pull requests.
+4. Keep the existing Pro repository **private**; verify access limits, private CI tokens, reviewer protections and artifact retention. Never place private assets in public forks or pull requests.
 5. Pin Community dependency in Pro; test both editions independently in Linux VM CI, including actual pretrained models, FFmpeg, 4 GiB RSS ceilings, and install/uninstall. Gate release tags on passing evidence.
 6. Publish Community beta only when reproducible installable artifacts pass tests. Do not publish Pro binaries or final releases without an explicit release decision.
 
@@ -51,4 +52,4 @@ Public contributors retain their rights under the chosen OSS license; Pro must r
 
 ## Current execution status
 
-The existing Community repository is still private. MIT-licensed source and Community edition API are implemented on the development branch, but publication still requires a full history and third-party rights audit. A **separate private Pro repository bootstrap** with an experimental Fidelity Guard has been prepared outside this repository; the GitHub Pro repository itself is **not created yet**. Reviewed upstream synchronization, VM tests, installer verification and commercial licensing remain open.
+The Community source repository is currently PUBLIC and carries an MIT license for original code. Its full history and third-party rights remain to be audited before an additional certified release. The separate `lumqenix-pro` GitHub repository exists and remains PRIVATE, with experimental Fidelity Guard and reviewed one-way sync tooling. VM testing, private credential configuration, commercial entitlements, complete installers and release verification remain open.

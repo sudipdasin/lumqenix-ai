@@ -1,7 +1,8 @@
-# Community public-release gate (mandatory)
+# Community certified-release and public-history audit (mandatory)
 
-**Current state:** repository remains private. This checklist must be
-completed before changing its GitHub visibility or publishing binaries.
+**Current state:** the Community repository is already PUBLIC. Run these
+checks against the full public history, and again before publishing new
+installable binaries, RC tags, or making fidelity/security claims.
 
 - [ ] Run `python scripts/check_edition_boundary.py` on intended release HEAD.
 - [ ] Run `python scripts/audit_publication.py --history` in a **full clone**
@@ -20,9 +21,10 @@ completed before changing its GitHub visibility or publishing binaries.
       execution logs, artifacts and accurate skips.
 - [ ] Test install, uninstall, UI, permissions and baseline quality in a Linux
       VM plus an actual 4 GiB RAM CPU machine before claiming that requirement.
-- [ ] Create `lumqenix-pro` separately with **private visibility**, restricted
-      access, branch protections, commercial-only source and a pinned
-      dependency on the Community repository.
+- [x] Create `lumqenix-pro` separately with **private visibility**, a
+      distinct proprietary source tree and pinned Community commit.
+- [ ] Audit Pro access, token scopes, protected branches, artifact retention,
+      dependency restrictions and commercial source licensing.
 - [ ] Create Pro CI with independent entitlement, regression and dependency
       compatibility checks. Never mirror Pro content to the public repository.
 - [ ] Confirm public release links and packages include no secret, private
