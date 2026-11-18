@@ -1,26 +1,47 @@
-"""Conservative CPU video workload estimator for constrained Community installs."""
+"""Conservative CPU video workload estimator for constrained Community installs.
+
+Untrusted ffprobe metadata is checked before FFmpeg processing. Missing FPS is
+estimated conservatively from the supported 240 FPS maximum, never accepted as
+an unlimited workload. The limit is a compute budget, not a RAM guarantee.
+"""
 from fractions import Fraction
 import math
 
 MAX_ESTIMATED_OUTPUT_SAMPLES = 450_000_000
 MAX_ESTIMATED_FRAMES = 1800
+MAX_SUPPORTED_FPS = 240
+
+
+def _parse_rate(value):
+    if value is None or value == "" or value == "N/A" or value == "0/0":
+        return None
+    try:
+        fps = Fraction(str(value))
+    except (TypeError, ValueError, ZeroDivisionError, OverflowError) as exc:
+        raise ValueError("Invalid video frame rate") from exc
+    if fps <= 0 or fps > MAX_SUPPORTED_FPS:
+        raise ValueError("Unsupported video frame rate")
+    return fps
 
 
 def validate_video_workload(stream: dict, duration: float, output_pixels: int) -> None:
-    """Reject extreme video workloads before starting expensive FFmpeg transcoding.
+    """Reject videos whose upper-bound frame/pixel work exceeds the Lite budget.
 
-    FPS metadata may be missing or unreliable. A missing FPS is handled by
-    FFmpeg's existing execution timeout, rather than falsely rejecting files.
+    When both FPS fields are available, use the larger valid rate. Missing FPS
+    uses a conservative 240 FPS ceiling rather than silently bypassing limits.
     """
-    rate = stream.get("avg_frame_rate") or stream.get("r_frame_rate")
-    if rate in (None, "", "N/A", "0/0"):
-        return
-    try:
-        fps = Fraction(str(rate))
-    except (ValueError, ZeroDivisionError, OverflowError) as exc:
-        raise ValueError("Invalid video frame rate") from exc
-    if fps <= 0 or fps > 240:
-        raise ValueError("Unsupported video frame rate")
+    if not isinstance(stream, dict):
+        raise ValueError("Invalid video stream metadata")
+    if isinstance(duration, bool) or not isinstance(duration, (int, float)) or not math.isfinite(duration) or duration <= 0:
+        raise ValueError("Invalid video duration")
+    if isinstance(output_pixels, bool) or not isinstance(output_pixels, int) or output_pixels <= 0:
+        raise ValueError("Invalid output pixel count")
+    rates = [_parse_rate(stream.get(key)) for key in ("avg_frame_rate", "r_frame_rate")]
+    known = [rate for rate in rates if rate is not None]
+    fps = max(known) if known else Fraction(MAX_SUPPORTED_FPS, 1)
+    # Early bounds avoid huge multiplications for untrusted metadata.
+    if duration > MAX_ESTIMATED_FRAMES / float(fps):
+        raise OverflowError("Video workload exceeds Lite CPU budget")
     frames = math.ceil(float(fps) * duration)
     if frames > MAX_ESTIMATED_FRAMES or frames * output_pixels > MAX_ESTIMATED_OUTPUT_SAMPLES:
         raise OverflowError("Video workload exceeds Lite CPU budget")
