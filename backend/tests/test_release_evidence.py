@@ -162,3 +162,23 @@ def test_malformed_multiscene_evidence_fails_closed(mutate):
     mutate(*documents)
     with pytest.raises(EvidenceError):
         validate_scene_bundle(*documents)
+
+@pytest.mark.parametrize("mutate", [
+    lambda p, q, a: q.__setitem__("edges", {"dataset": "deterministic-synthetic-edges-v1"}),
+    lambda p, q, a: q["smooth"].__setitem__("baseline_bicubic", None),
+    lambda p, q, a: q["edges"].__setitem__("baseline_bicubic", []),
+    lambda p, q, a: q["edges"]["models"]["fsrcnn"]["quality"]["baseline_metrics"].pop("psnr_rgb_db"),
+    lambda p, q, a: q["smooth"]["models"]["espcn"]["quality"]["baseline_metrics"].pop("mae_rgb"),
+])
+def test_invalid_scene_baselines_fail_with_evidence_error(mutate):
+    documents = list(deepcopy(good_scene_bundle()))
+    mutate(*documents)
+    with pytest.raises(EvidenceError):
+        validate_scene_bundle(*documents)
+
+
+@pytest.mark.parametrize("reports", [None, [], "invalid"])
+def test_invalid_scene_collection_fails_with_evidence_error(reports):
+    performance, _, api = good_scene_bundle()
+    with pytest.raises(EvidenceError):
+        validate_scene_bundle(performance, reports, api)
