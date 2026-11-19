@@ -24,6 +24,7 @@ jobs:
           name: Compile and execute backend regression tests
           command: |
             .venv/bin/python -m compileall -q backend/app backend/scripts backend/tests
+            mkdir -p test-results
             cd backend
             ../.venv/bin/python -m pytest -q tests --junitxml=../test-results/pytest.xml
       - store_test_results:
