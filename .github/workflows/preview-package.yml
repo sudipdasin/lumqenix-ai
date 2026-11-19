@@ -4,6 +4,9 @@ on:
     branches: ['preview/**']
   pull_request:
   workflow_dispatch:
+concurrency:
+  group: preview-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -92,6 +95,12 @@ jobs:
         run: |
           git archive --format=zip --output=/tmp/lumqenix-community-v0.3.0-rc.2-source.zip HEAD
           test -s /tmp/lumqenix-community-v0.3.0-rc.2-source.zip
+      - name: Generate and verify source ZIP checksum
+        run: |
+          cd /tmp
+          sha256sum lumqenix-community-v0.3.0-rc.2-source.zip > lumqenix-community-v0.3.0-rc.2-source.zip.sha256
+          sha256sum -c lumqenix-community-v0.3.0-rc.2-source.zip.sha256
+          unzip -t lumqenix-community-v0.3.0-rc.2-source.zip
       - name: Upload beta regression results
         if: always()
         uses: actions/upload-artifact@v4
@@ -103,5 +112,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lumqenix-community-v0.3.0-rc.2-linux-source
-          path: /tmp/lumqenix-community-v0.3.0-rc.2-source.zip
+          path: |
+            /tmp/lumqenix-community-v0.3.0-rc.2-source.zip
+            /tmp/lumqenix-community-v0.3.0-rc.2-source.zip.sha256
           if-no-files-found: error
