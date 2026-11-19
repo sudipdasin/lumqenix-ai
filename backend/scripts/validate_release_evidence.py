@@ -90,11 +90,16 @@ SCENES = ("textures", "edges", "smooth")
 
 def validate_scene_bundle(performance, reports, api):
     """Require all three independent real-model scenes, not just textures."""
-    if set(reports) != set(SCENES):
+    if not isinstance(reports, dict) or set(reports) != set(SCENES):
         raise EvidenceError(f"Expected quality scenes {SCENES}, received {sorted(reports)}")
+    for scene in SCENES:
+        if not isinstance(reports[scene], dict):
+            raise EvidenceError(f"{scene}: invalid quality report")
     baseline_result = validate(performance, reports["textures"], api)
     for scene in SCENES:
         report = reports[scene]
+        if not isinstance(report.get("models"), dict):
+            raise EvidenceError(f"{scene}: missing model evidence map")
         expected = f"deterministic-synthetic-{scene}-v1"
         if report.get("dataset") != expected:
             raise EvidenceError(f"{scene}: unexpected dataset identifier")
@@ -111,8 +116,12 @@ def validate_scene_bundle(performance, reports, api):
                  not math.isfinite(scene_psnr))):
             raise EvidenceError(f"{scene}: invalid bicubic PSNR")
         for name in ("fsrcnn", "espcn"):
-            entry = report.get("models", {}).get(name, {})
-            execution = entry.get("execution", {})
+            entry = report["models"].get(name)
+            if not isinstance(entry, dict):
+                raise EvidenceError(f"{scene}/{name}: invalid model evidence")
+            execution = entry.get("execution")
+            if not isinstance(execution, dict):
+                raise EvidenceError(f"{scene}/{name}: invalid worker evidence")
             if execution.get("status") != "ok":
                 raise EvidenceError(f"{scene}/{name}: missing real-model execution")
             if execution.get("model") != name:
@@ -130,11 +139,15 @@ def validate_scene_bundle(performance, reports, api):
             model_hash = performance.get(name, {}).get("model_sha256")
             if execution.get("model_sha256") != model_hash:
                 raise EvidenceError(f"{scene}/{name}: model hash mismatch")
-            quality = entry.get("quality", {})
+            quality = entry.get("quality")
+            if not isinstance(quality, dict):
+                raise EvidenceError(f"{scene}/{name}: missing quality measurements")
             if quality.get("dimensions") != [256, 256]:
                 raise EvidenceError(f"{scene}/{name}: invalid prediction dimensions")
             for label in ("prediction_metrics", "baseline_metrics"):
-                m = quality.get(label, {})
+                m = quality.get(label)
+                if not isinstance(m, dict):
+                    raise EvidenceError(f"{scene}/{name}: missing {label}")
                 for key in ("mae_rgb", "mse_rgb"):
                     value = m.get(key)
                     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
