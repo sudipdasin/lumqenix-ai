@@ -298,6 +298,11 @@ jobs:
           pattern: '*benchmark*'
           merge-multiple: true
           path: /tmp/lumqenix-evidence
+      - name: Download paired-image evidence from completed neural job
+        uses: actions/download-artifact@v4
+        with:
+          name: pretrained-paired-images
+          path: /tmp/lumqenix-paired-images
       - name: Reject missing, inconsistent, or over-budget evidence
         run: |
           python backend/scripts/validate_release_evidence.py \
@@ -306,7 +311,8 @@ jobs:
             --quality-edges /tmp/lumqenix-evidence/pretrained-quality-edges.json \
             --quality-smooth /tmp/lumqenix-evidence/pretrained-quality-smooth.json \
             --api /tmp/lumqenix-evidence/cpu-benchmark.json \
-            --manifest /tmp/lumqenix-evidence/pretrained-quality-manifest.json > release-evidence.json
+            --manifest /tmp/lumqenix-evidence/pretrained-quality-manifest.json \
+            --images-dir /tmp/lumqenix-paired-images > release-evidence.json
           cat release-evidence.json
       - name: Preserve release evidence and six-model comparison report
         if: always()
