@@ -1,0 +1,46 @@
+version: 2.1
+parameters:
+  auto_main_checks:
+    type: boolean
+    default: true
+  run_manual_checks:
+    type: boolean
+    default: false
+jobs:
+  cpu-smoke:
+    docker:
+      - image: cimg/python:3.11-node
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install backend smoke dependencies
+          command: |
+            cd backend
+            python -m pip install -r requirements.txt pytest httpx
+      - run:
+          name: Compile and run CPU smoke tests
+          command: |
+            cd backend
+            python -m compileall -q app scripts tests
+            python -m pytest -q tests
+      - run:
+          name: Check frontend JavaScript syntax
+          command: |
+            python -c 'from pathlib import Path; html = Path("frontend/index.html").read_text(); assert "<script>" in html and "</script>" in html; Path("/tmp/lumqenix-frontend.js").write_text(html.split("<script>", 1)[1].split("</script>", 1)[0])'
+            node --check /tmp/lumqenix-frontend.js
+workflows:
+  cpu-ci:
+    # CI_MASTER_TOGGLE: managed by scripts/ci-master-toggle.py
+    when:
+      or:
+        - << pipeline.parameters.auto_main_checks >>
+        - << pipeline.parameters.run_manual_checks >>
+    jobs:
+      - cpu-smoke:
+          filters:
+            branches:
+              only:
+                - main
+                - development/rc-evidence-manifest-hardening-20261119
