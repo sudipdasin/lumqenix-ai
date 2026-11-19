@@ -321,7 +321,7 @@ jobs:
 
   publish-verified-prerelease:
     name: Publish RC2 only after full evidence gates pass
-    if: github.event_name == 'workflow_dispatch' && inputs.publish_prerelease == true && github.ref == 'refs/heads/preview/v0.3.0-rc.2-beta'
+    if: github.ref == 'refs/heads/preview/v0.3.0-rc.2-beta' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_prerelease == true))
     needs: [test, frontend, video-integration, cpu-benchmark, release-evidence]
     runs-on: ubuntu-latest
     permissions:
