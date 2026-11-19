@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.0-rc.2 — Beta preview candidate (2026-11-19)
+- Introduce a separate RC2 preview branch without overwriting RC1.
+- Harden multi-scene release-evidence parsing against malformed report structures and add six regression cases.
+- Update beta source ZIP artifact name, version metadata, and installation references.
+- Release qualification remains pending: real-model, Linux CI, and 4 GiB RAM benchmarks must be executed and verified; no stable release is claimed.
+
+
 ## v0.3.0-rc.1 — Beta preview (2026-11-18)
 - Experimental preview branch `preview/v0.3.0-rc.1-beta` created from the reliability development branch; backend version set to `0.3.0-rc.1`.
 - Includes CPU-first image/video enhancement, optional pretrained FSRCNN/ESPCN inference, ONNX tiling, reproducible quality comparisons, and CI release-evidence validation.
