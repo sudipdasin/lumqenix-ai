@@ -41,7 +41,7 @@ jobs:
           sys.path.insert(0, 'backend')
           from app.version import VERSION
           from app.main import app
-          assert VERSION == '0.3.0-rc.1'
+          assert VERSION == '0.3.0-rc.2'
           assert app.title == 'Lumqenix API'
           PY
       - name: Smoke-test local API and UI startup
@@ -90,8 +90,8 @@ jobs:
           ! grep -Eq -- '--bind (0\\.0\\.0\\.0|::)' scripts/run-linux.sh
       - name: Archive source preview for download
         run: |
-          git archive --format=zip --output=/tmp/lumqenix-community-v0.3.0-rc.1-source.zip HEAD
-          test -s /tmp/lumqenix-community-v0.3.0-rc.1-source.zip
+          git archive --format=zip --output=/tmp/lumqenix-community-v0.3.0-rc.2-source.zip HEAD
+          test -s /tmp/lumqenix-community-v0.3.0-rc.2-source.zip
       - name: Upload beta regression results
         if: always()
         uses: actions/upload-artifact@v4
@@ -102,6 +102,6 @@ jobs:
       - name: Upload source preview ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: lumqenix-community-v0.3.0-rc.1-linux-source
-          path: /tmp/lumqenix-community-v0.3.0-rc.1-source.zip
+          name: lumqenix-community-v0.3.0-rc.2-linux-source
+          path: /tmp/lumqenix-community-v0.3.0-rc.2-source.zip
           if-no-files-found: error
