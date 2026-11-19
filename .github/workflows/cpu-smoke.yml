@@ -33,23 +33,16 @@ jobs:
           python -m pip uninstall -y opencv-python-headless
           python -m pip install "opencv-contrib-python-headless>=4.9,<5" "onnxruntime>=1.18,<2" onnx
           python scripts/fetch_test_models.py --output-dir /tmp/lumqenix-models
-      - name: Ensure FFmpeg with H.264 encoding support
+      # The four Python lanes validate backend behavior and neural inference.
+      # Real FFmpeg installation/encoding is a mandatory separate job below;
+      # do not block all matrix lanes on Ubuntu apt mirrors.
+      - name: Report optional FFmpeg availability
         run: |
-          # Hosted runners may already ship working FFmpeg + libx264.
-          # Avoid repeatedly blocking all four matrix lanes on apt mirrors.
-          if command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null && \
-             ffmpeg -hide_banner -encoders 2>/dev/null | grep -E '(^|[[:space:]])libx264([[:space:]]|$)' >/dev/null; then
-            echo "Using verified runner FFmpeg with libx264"
+          if command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null; then
+            ffmpeg -hide_banner -version | head -n 1
           else
-            timeout 180s sudo apt-get update -qq
-            timeout 180s sudo apt-get install -y --no-install-recommends ffmpeg libavcodec-extra
+            echo 'FFmpeg not preinstalled; real-video-integration job is required.'
           fi
-      - name: Verify real video integration prerequisites
-        run: |
-          command -v ffmpeg
-          command -v ffprobe
-          ffmpeg -hide_banner -encoders | tee /tmp/lumqenix-encoders.txt
-          grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)' /tmp/lumqenix-encoders.txt
       - name: Check dependency consistency
         run: python -m pip check
       - name: Compile Python
