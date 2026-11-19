@@ -158,22 +158,22 @@ jobs:
               json.dumps(manifest, indent=2, sort_keys=True) + '\n'
           )
           PY
+      - name: Stage flat real-model quality reports and paired images
+        if: matrix.neural && matrix.python == '3.12'
+        run: |
+          # Uploading both absolute /tmp and relative backend paths embeds
+          # runner directories in ZIPs, breaking download-artifact release gates.
+          mkdir -p release-quality-evidence/models
+          cp pretrained-quality.json pretrained-quality-edges.json pretrained-quality-smooth.json pretrained-quality-manifest.json release-quality-evidence/
+          cp /tmp/lumqenix-quality/reference-hr.png /tmp/lumqenix-quality/input-lr.png /tmp/lumqenix-quality/bicubic-2x.png release-quality-evidence/
+          cp /tmp/lumqenix-quality/models/fsrcnn-2x.png /tmp/lumqenix-quality/models/espcn-2x.png release-quality-evidence/models/
       - name: Upload paired-reference pretrained quality evidence
         if: always() && matrix.neural && matrix.python == '3.12'
         uses: actions/upload-artifact@v4
         with:
           name: pretrained-quality-benchmark
-          path: |
-            backend/pretrained-quality.json
-            backend/pretrained-quality-edges.json
-            backend/pretrained-quality-smooth.json
-            backend/pretrained-quality-manifest.json
-            /tmp/lumqenix-quality/reference-hr.png
-            /tmp/lumqenix-quality/input-lr.png
-            /tmp/lumqenix-quality/bicubic-2x.png
-            /tmp/lumqenix-quality/models/fsrcnn-2x.png
-            /tmp/lumqenix-quality/models/espcn-2x.png
-          if-no-files-found: warn
+          path: backend/release-quality-evidence/
+          if-no-files-found: error
       - name: Upload pretrained CPU benchmark evidence
         if: always() && matrix.neural && matrix.python == '3.12'
         uses: actions/upload-artifact@v4
@@ -309,7 +309,9 @@ jobs:
             --quality /tmp/lumqenix-evidence/pretrained-quality.json \
             --quality-edges /tmp/lumqenix-evidence/pretrained-quality-edges.json \
             --quality-smooth /tmp/lumqenix-evidence/pretrained-quality-smooth.json \
-            --api /tmp/lumqenix-evidence/cpu-benchmark.json > release-evidence.json
+            --api /tmp/lumqenix-evidence/cpu-benchmark.json \
+            --manifest /tmp/lumqenix-evidence/pretrained-quality-manifest.json \
+            --images-dir /tmp/lumqenix-evidence > release-evidence.json
           cat release-evidence.json
       - name: Preserve release evidence and six-model comparison report
         if: always()
@@ -319,32 +321,159 @@ jobs:
           path: release-evidence.json
           if-no-files-found: warn
 
-  publish-verified-prerelease:
-    name: Publish RC2 only after full evidence gates pass
-    if: github.ref == 'refs/heads/preview/v0.3.0-rc.2-beta' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_prerelease == true))
-    needs: [test, frontend, video-integration, cpu-benchmark, release-evidence]
+  history-audit:
+    name: Full reachable-history publication screen
+    if: github.event_name == 'push' && github.ref == 'refs/heads/preview/v0.3.0-rc.2-integrated'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
-      - name: Verify exact release version
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify complete checkout and Community-only sources
         run: |
-          grep -qx 'VERSION = "0.3.0-rc.2"' backend/app/version.py
-          test -s LICENSE
-      - name: Package versioned release source and checksum
-        run: |
-          mkdir -p dist
-          git archive --format=zip --output=dist/lumqenix-community-v0.3.0-rc.2-source.zip HEAD
-          cd dist
-          sha256sum lumqenix-community-v0.3.0-rc.2-source.zip > lumqenix-community-v0.3.0-rc.2-source.zip.sha256
-          sha256sum -c lumqenix-community-v0.3.0-rc.2-source.zip.sha256
-          unzip -t lumqenix-community-v0.3.0-rc.2-source.zip
-      - name: Publish public prerelease (not stable)
+          git rev-parse --is-shallow-repository | grep -qx false
+          python scripts/check_edition_boundary.py
+      - name: Audit reachable Git object history for high-confidence publication hazards
+        run: python scripts/audit_publication.py --history > history-audit.json
+      - name: Retain audit evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-history-publication-audit
+          path: history-audit.json
+          if-no-files-found: warn
+
+  publish-verified-prerelease:
+    name: Publish verified Linux source prerelease (never stable)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/preview/v0.3.0-rc.2-integrated'
+    needs: [test, frontend, video-integration, cpu-benchmark, release-evidence, history-audit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Require successful Linux preview packaging for exactly this commit
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v0.3.0-rc.2 dist/lumqenix-community-v0.3.0-rc.2-source.zip dist/lumqenix-community-v0.3.0-rc.2-source.zip.sha256 \
-            --target "$GITHUB_SHA" --title "Lumqenix Community v0.3.0-rc.2 (verified beta)" \
-            --notes "Prerelease source archive. Install with scripts/install-linux.sh and run with scripts/run-linux.sh. Full CPU, neural, video and release-evidence gates must pass before this job executes. Not a stable binary package." \
-            --prerelease
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          repository = os.environ["GITHUB_REPOSITORY"]
+          expected_sha = os.environ["GITHUB_SHA"]
+          branch = "preview/v0.3.0-rc.2-integrated"
+          url = ("https://api.github.com/repos/" + repository +
+                 "/actions/workflows/preview-package.yml/runs?branch=" +
+                 urllib.parse.quote(branch, safe="") + "&event=push&per_page=30")
+          for _ in range(36):
+              request = urllib.request.Request(url, headers={
+                  "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+              })
+              with urllib.request.urlopen(request, timeout=15) as response:
+                  runs = json.load(response)["workflow_runs"]
+              matching = [run for run in runs if run["head_sha"] == expected_sha]
+              if matching and matching[0]["status"] == "completed":
+                  if matching[0]["conclusion"] != "success":
+                      raise SystemExit("Matching Linux preview packaging did not pass")
+                  Path("/tmp/lumqenix-preview-run-id").write_text(str(matching[0]["id"]))
+                  print("Matching Linux preview package passed:", matching[0]["id"])
+                  break
+              time.sleep(5)
+          else:
+              raise SystemExit("No successful matching Linux preview run: fail closed")
+          PY
+      - name: Retrieve and verify same-SHA source archive and release evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/lumqenix-release
+          gh run download "$(cat /tmp/lumqenix-preview-run-id)" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name lumqenix-community-v0.3.0-rc.2-linux-source \
+            --dir /tmp/lumqenix-release
+          gh run download "$GITHUB_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name release-evidence-gate \
+            --dir /tmp/lumqenix-release
+          cd /tmp/lumqenix-release
+          sha256sum -c lumqenix-community-v0.3.0-rc.2-source.zip.sha256
+          python - <<'PY'
+          import json
+          import zipfile
+          from pathlib import Path, PurePosixPath
+
+          root = Path("/tmp/lumqenix-release")
+          archive = root / "lumqenix-community-v0.3.0-rc.2-source.zip"
+          assert archive.is_file() and archive.stat().st_size > 0
+          with zipfile.ZipFile(archive) as package:
+              invalid = [name for name in package.namelist()
+                         if name.startswith("/") or ".." in PurePosixPath(name).parts]
+              assert not invalid, "Unsafe source ZIP paths"
+              entries = set(package.namelist())
+              required = {"LICENSE", "backend/app/version.py", "backend/app/edition.py",
+                          "frontend/index.html", "scripts/install-linux.sh",
+                          "scripts/run-linux.sh"}
+              assert required.issubset(entries), sorted(required - entries)
+              assert 'VERSION = "0.3.0-rc.1"' in package.read("backend/app/version.py").decode()
+              assert package.testzip() is None, "Source archive corrupted"
+              assert not any(name.startswith(("pro_backend/", "pro_models/",
+                                              "licensing/", "private/")) for name in entries)
+          report = json.loads((root / "release-evidence.json").read_text())
+          assert report.get("model_scene_combinations") == 6, report
+          assert report.get("paired_images_verified") == 5, report
+          print("Verified source ZIP, five image hashes, and six real-model scene comparisons")
+          PY
+      - name: Publish beta RC tag only (never stable or latest)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v0.3.0-rc.2
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release tag already exists; refusing to overwrite"
+            exit 1
+          fi
+          cat > /tmp/lumqenix-rc-notes.md <<'NOTES'
+          ## Lumqenix Community v0.3.0-rc.2 — experimental Linux source preview
+
+          Free open-source Community beta. Install the included source ZIP on
+          Linux with Python 3.10+ using bash scripts/install-linux.sh, then
+          launch locally using bash scripts/run-linux.sh. FFmpeg/ffprobe are
+          required for video. No root install or automatic system service.
+
+          Checks required on this exact commit: Python 3.10/3.12 (classic +
+          actual pretrained FSRCNN/ESPCN), frontend, real FFmpeg, CPU process
+          RSS, quality/manifest evidence, full reachable-history risk scan,
+          and Linux installation/UI/API smoke. The attached JSON is the
+          machine-checked benchmark summary.
+
+          LIMITATIONS: Not a production/v1.0 stable release. Does not certify
+          superiority to bicubic, photographic identity preservation, physical
+          4 GB systems, all Linux distros, or third-party media/model rights.
+          Optional pretrained model weights are not included. Local loopback
+          only; do not expose the API publicly. Report problems in GitHub Issues.
+          NOTES
+          gh release create "$TAG" \
+            /tmp/lumqenix-release/lumqenix-community-v0.3.0-rc.2-source.zip \
+            /tmp/lumqenix-release/lumqenix-community-v0.3.0-rc.2-source.zip.sha256 \
+            /tmp/lumqenix-release/release-evidence.json \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Lumqenix Community v0.3.0-rc.2 — Linux beta preview" \
+            --notes-file /tmp/lumqenix-rc-notes.md \
+            --prerelease --latest=false
