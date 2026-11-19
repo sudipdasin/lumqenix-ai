@@ -34,7 +34,7 @@ jobs:
           python -m pip install "opencv-contrib-python-headless>=4.9,<5" "onnxruntime>=1.18,<2" onnx
           python scripts/fetch_test_models.py --output-dir /tmp/lumqenix-models
       - name: Install FFmpeg with H.264 encoding support
-        timeout-minutes: 8
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           if command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1 && \
@@ -216,8 +216,8 @@ jobs:
 
   video-integration:
     name: Real FFmpeg integration
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend
@@ -238,8 +238,8 @@ jobs:
              ffmpeg -hide_banner -encoders 2>/dev/null | grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)'; then
             echo "Preinstalled FFmpeg supports libx264; skipping apt"
           else
-            sudo timeout 240s apt-get -o Acquire::Retries=2 update -qq
-            sudo timeout 240s apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=2 install -y ffmpeg libavcodec-extra
+            sudo timeout 600s apt-get -o Acquire::Retries=2 update -qq
+            sudo timeout 600s apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=2 install -y ffmpeg libavcodec-extra
           fi
       - name: Require FFmpeg with H.264 encoder
         run: |
