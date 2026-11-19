@@ -303,7 +303,8 @@ jobs:
             --quality /tmp/lumqenix-evidence/pretrained-quality.json \
             --quality-edges /tmp/lumqenix-evidence/pretrained-quality-edges.json \
             --quality-smooth /tmp/lumqenix-evidence/pretrained-quality-smooth.json \
-            --api /tmp/lumqenix-evidence/cpu-benchmark.json > release-evidence.json
+            --api /tmp/lumqenix-evidence/cpu-benchmark.json \
+            --manifest /tmp/lumqenix-evidence/pretrained-quality-manifest.json > release-evidence.json
           cat release-evidence.json
       - name: Preserve release evidence and six-model comparison report
         if: always()
