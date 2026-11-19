@@ -1,7 +1,7 @@
 name: CPU smoke tests
 on:
   push:
-    branches: [main, 'development/**']
+    branches: [main, 'development/**', 'preview/**']
   pull_request:
   workflow_dispatch:
 jobs:
