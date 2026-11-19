@@ -91,7 +91,7 @@ SCENES = ("textures", "edges", "smooth")
 def validate_scene_bundle(performance, reports, api):
     """Require all three independent real-model scenes, not just textures."""
     if not isinstance(reports, dict) or set(reports) != set(SCENES):
-        raise EvidenceError(f"Expected quality scenes {SCENES}, received {sorted(reports)}")
+        raise EvidenceError(f"Expected quality scenes {SCENES}, received {sorted(reports) if isinstance(reports, dict) else type(reports).__name__}")
     for scene in SCENES:
         if not isinstance(reports[scene], dict):
             raise EvidenceError(f"{scene}: invalid quality report")
@@ -107,7 +107,9 @@ def validate_scene_bundle(performance, reports, api):
             raise EvidenceError(f"{scene}: invalid HR dimensions")
         if report.get("low_resolution_dimensions") != [128, 128]:
             raise EvidenceError(f"{scene}: invalid LR dimensions")
-        baseline = report.get("baseline_bicubic", {})
+        baseline = report.get("baseline_bicubic")
+        if not isinstance(baseline, dict):
+            raise EvidenceError(f"{scene}: missing bicubic baseline measurements")
         positive(baseline.get("mae_rgb"), f"{scene} bicubic MAE")
         positive(baseline.get("mse_rgb"), f"{scene} bicubic MSE")
         scene_psnr = baseline.get("psnr_rgb_db")
@@ -156,7 +158,7 @@ def validate_scene_bundle(performance, reports, api):
                 if psnr is not None and (isinstance(psnr, bool) or not isinstance(psnr, (int, float)) or not math.isfinite(psnr)):
                     raise EvidenceError(f"{scene}/{name}/{label}: invalid PSNR")
             for key in ("mae_rgb", "mse_rgb", "psnr_rgb_db"):
-                if quality["baseline_metrics"][key] != baseline.get(key):
+                if quality["baseline_metrics"].get(key) != baseline.get(key):
                     raise EvidenceError(f"{scene}/{name}: baseline {key} mismatch")
     baseline_result["scenes_verified"] = list(SCENES)
     baseline_result["quality_summary"] = summarize_quality(reports)
