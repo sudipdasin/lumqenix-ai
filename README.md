@@ -15,6 +15,8 @@ bash scripts/run-linux.sh
 
 Open http://127.0.0.1:8080. The installer uses a local `.venv` without root permissions. FFmpeg and ffprobe must be installed separately for video processing. Stop with Ctrl+C. To remove the local installation, delete the cloned directory; no system service is installed. No pretrained weights are included by default.
 
+**Artifact verification:** Successful GitHub Actions preview runs produce a source ZIP and a matching `.sha256` checksum file. In the download directory, run `sha256sum -c lumqenix-community-v0.3.0-rc.2-source.zip.sha256` before extracting the CI artifact. The GitHub branch ZIP linked above is a separate automatically generated archive and is **not** covered by that CI checksum. Do not treat an artifact as validated until the workflow run has passed.
+
 **Important distribution limitation:** the GitHub repository must be set to **Public** by its owner before anonymous users can clone or download this preview. A branch is not a formal GitHub Release or an installable native package. Do not expose the local API to the public internet.
 
 Report sanitized bugs and suggestions through [GitHub Issues](https://github.com/sudipdasin/lumqenix-ai/issues/new/choose). Never upload private photos, personal paths, credentials, or sensitive media. Contributions are welcome subject to the repository's MIT license.
