@@ -429,7 +429,7 @@ jobs:
                           "frontend/index.html", "scripts/install-linux.sh",
                           "scripts/run-linux.sh"}
               assert required.issubset(entries), sorted(required - entries)
-              assert 'VERSION = "0.3.0-rc.1"' in package.read("backend/app/version.py").decode()
+              assert 'VERSION = "0.3.0-rc.2"' in package.read("backend/app/version.py").decode()
               assert package.testzip() is None, "Source archive corrupted"
               assert not any(name.startswith(("pro_backend/", "pro_models/",
                                               "licensing/", "private/")) for name in entries)
