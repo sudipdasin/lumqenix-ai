@@ -4,6 +4,12 @@ on:
     branches: [main, 'development/**', 'preview/**']
   pull_request:
   workflow_dispatch:
+    inputs:
+      publish_prerelease:
+        description: 'Publish verified RC2 prerelease only after all gates pass'
+        type: boolean
+        required: true
+        default: false
 jobs:
   test:
     strategy:
@@ -312,3 +318,33 @@ jobs:
           name: release-evidence-gate
           path: release-evidence.json
           if-no-files-found: warn
+
+  publish-verified-prerelease:
+    name: Publish RC2 only after full evidence gates pass
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_prerelease == true && github.ref == 'refs/heads/preview/v0.3.0-rc.2-beta'
+    needs: [test, frontend, video-integration, cpu-benchmark, release-evidence]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact release version
+        run: |
+          grep -qx 'VERSION = "0.3.0-rc.2"' backend/app/version.py
+          test -s LICENSE
+      - name: Package versioned release source and checksum
+        run: |
+          mkdir -p dist
+          git archive --format=zip --output=dist/lumqenix-community-v0.3.0-rc.2-source.zip HEAD
+          cd dist
+          sha256sum lumqenix-community-v0.3.0-rc.2-source.zip > lumqenix-community-v0.3.0-rc.2-source.zip.sha256
+          sha256sum -c lumqenix-community-v0.3.0-rc.2-source.zip.sha256
+          unzip -t lumqenix-community-v0.3.0-rc.2-source.zip
+      - name: Publish public prerelease (not stable)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create v0.3.0-rc.2 dist/lumqenix-community-v0.3.0-rc.2-source.zip dist/lumqenix-community-v0.3.0-rc.2-source.zip.sha256 \
+            --target "$GITHUB_SHA" --title "Lumqenix Community v0.3.0-rc.2 (verified beta)" \
+            --notes "Prerelease source archive. Install with scripts/install-linux.sh and run with scripts/run-linux.sh. Full CPU, neural, video and release-evidence gates must pass before this job executes. Not a stable binary package." \
+            --prerelease
