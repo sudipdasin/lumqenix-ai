@@ -4,6 +4,11 @@ on:
     branches: [main, 'development/**']
   pull_request:
   workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: community-verify-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     strategy:
@@ -152,21 +157,23 @@ jobs:
               json.dumps(manifest, indent=2, sort_keys=True) + '\n'
           )
           PY
-      - name: Stage flat real-model quality reports and paired images
-        if: matrix.neural && matrix.python == '3.12'
-        run: |
-          # Uploading both absolute /tmp and relative backend paths embeds
-          # runner directories in ZIPs, breaking download-artifact release gates.
-          mkdir -p release-quality-evidence/models
-          cp pretrained-quality.json pretrained-quality-edges.json pretrained-quality-smooth.json pretrained-quality-manifest.json release-quality-evidence/
-          cp /tmp/lumqenix-quality/reference-hr.png /tmp/lumqenix-quality/input-lr.png /tmp/lumqenix-quality/bicubic-2x.png release-quality-evidence/
-          cp /tmp/lumqenix-quality/models/fsrcnn-2x.png /tmp/lumqenix-quality/models/espcn-2x.png release-quality-evidence/models/
       - name: Upload paired-reference pretrained quality evidence
         if: always() && matrix.neural && matrix.python == '3.12'
         uses: actions/upload-artifact@v4
         with:
           name: pretrained-quality-benchmark
-          path: backend/release-quality-evidence/
+          path: |
+            backend/pretrained-quality.json
+            backend/pretrained-quality-edges.json
+            backend/pretrained-quality-smooth.json
+            backend/pretrained-quality-manifest.json
+          if-no-files-found: error
+      - name: Upload paired image files separately from benchmark JSON
+        if: always() && matrix.neural && matrix.python == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pretrained-paired-images
+          path: /tmp/lumqenix-quality/
           if-no-files-found: error
       - name: Upload pretrained CPU benchmark evidence
         if: always() && matrix.neural && matrix.python == '3.12'
@@ -296,6 +303,11 @@ jobs:
           pattern: '*benchmark*'
           merge-multiple: true
           path: /tmp/lumqenix-evidence
+      - name: Download paired image evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: pretrained-paired-images
+          path: /tmp/lumqenix-paired-images
       - name: Reject missing, inconsistent, or over-budget evidence
         run: |
           python backend/scripts/validate_release_evidence.py \
@@ -303,7 +315,9 @@ jobs:
             --quality /tmp/lumqenix-evidence/pretrained-quality.json \
             --quality-edges /tmp/lumqenix-evidence/pretrained-quality-edges.json \
             --quality-smooth /tmp/lumqenix-evidence/pretrained-quality-smooth.json \
-            --api /tmp/lumqenix-evidence/cpu-benchmark.json > release-evidence.json
+            --api /tmp/lumqenix-evidence/cpu-benchmark.json \
+            --manifest /tmp/lumqenix-evidence/pretrained-quality-manifest.json \
+            --images-dir /tmp/lumqenix-paired-images > release-evidence.json
           cat release-evidence.json
       - name: Preserve release evidence and six-model comparison report
         if: always()
@@ -312,3 +326,140 @@ jobs:
           name: release-evidence-gate
           path: release-evidence.json
           if-no-files-found: warn
+
+  source-boundary:
+    name: Community source and history audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/check_edition_boundary.py
+      - run: python scripts/audit_publication.py --history
+
+  source-preview:
+    name: Extracted Linux preview install and lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Build source at exact tested commit twice
+        run: |
+          python scripts/build_preview.py --repo . --output-dir dist
+          python scripts/build_preview.py --repo . --output-dir /tmp/lumqenix-repeat
+          cmp dist/lumqenix-community-0.3.0-dev.8.zip /tmp/lumqenix-repeat/lumqenix-community-0.3.0-dev.8.zip
+          (cd dist && sha256sum -c SHA256SUMS)
+          DIGEST=$(sha256sum dist/lumqenix-community-0.3.0-dev.8.zip | cut -d ' ' -f 1)
+          python scripts/build_preview.py --verify dist/lumqenix-community-0.3.0-dev.8.zip --sha256 "$DIGEST"
+      - name: Extract verified archive into path with spaces
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from zipfile import ZipFile
+          target = Path(os.environ['RUNNER_TEMP']) / 'Lumqenix preview'
+          target.mkdir()
+          with ZipFile('dist/lumqenix-community-0.3.0-dev.8.zip') as archive:
+              archive.extractall(target)
+          PY
+      - name: Install extracted application without root
+        run: bash "$RUNNER_TEMP/Lumqenix preview/lumqenix-community-0.3.0-dev.8/scripts/install-linux.sh"
+      - name: Exercise installed API UI real image and shutdown
+        run: |
+          ROOT="$RUNNER_TEMP/Lumqenix preview/lumqenix-community-0.3.0-dev.8"
+          "$ROOT/.venv/bin/python" scripts/smoke_preview.py --root "$ROOT" --version 0.3.0-dev.8 > dist/installed-preview-smoke.json
+          cat dist/installed-preview-smoke.json
+      - name: Verify repeat install and safe uninstall
+        run: |
+          ROOT="$RUNNER_TEMP/Lumqenix preview/lumqenix-community-0.3.0-dev.8"
+          bash "$ROOT/scripts/install-linux.sh"
+          bash "$ROOT/scripts/uninstall-linux.sh"
+          bash "$ROOT/scripts/uninstall-linux.sh"
+          test ! -e "$ROOT/.venv"
+          test -s "$ROOT/backend/app/main.py"
+          test -s "$ROOT/frontend/index.html"
+      - name: Preserve verified downloadable preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: community-linux-source-preview
+          path: dist/
+          if-no-files-found: error
+
+  publish-preview:
+    name: Publish verified development preview
+    needs: [release-evidence, source-preview, source-boundary]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/development/publish-community-dev8-20261119'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: community-linux-source-preview
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-evidence-gate
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: pretrained-cpu-benchmark
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: cpu-image-api-benchmark
+          path: release-assets
+      - name: Validate exact provenance and publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          (cd release-assets && sha256sum -c SHA256SUMS)
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from zipfile import ZipFile
+          with ZipFile('release-assets/lumqenix-community-0.3.0-dev.8.zip') as archive:
+              manifest = json.loads(archive.read('lumqenix-community-0.3.0-dev.8/RELEASE-MANIFEST.json'))
+          assert manifest['version'] == '0.3.0-dev.8'
+          assert manifest['source_commit'] == os.environ['GITHUB_SHA']
+          evidence = json.loads(Path('release-assets/release-evidence.json').read_text())
+          assert evidence['evidence_complete'] is True
+          assert evidence['paired_images_verified'] == 5
+          assert evidence['model_scene_combinations'] == 6
+          smoke = json.loads(Path('release-assets/installed-preview-smoke.json').read_text())
+          assert smoke['installed_version'] == manifest['version'] and smoke['shutdown_cleanup'] is True
+          PY
+          cp docs/RELEASE_NOTES_0.3.0-dev.8.md /tmp/lumqenix-release-notes.md
+          printf '\nVerified source commit: `%s`.\n\n[Executed verification workflow](https://github.com/%s/actions/runs/%s).\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> /tmp/lumqenix-release-notes.md
+          if git ls-remote --exit-code --tags origin refs/tags/v0.3.0-dev.8; then
+            echo 'Refusing to publish over an existing release tag' >&2
+            exit 1
+          else
+            CODE=$?
+            test "$CODE" -eq 2
+          fi
+          gh release create v0.3.0-dev.8 \
+            --target "$GITHUB_SHA" --prerelease --latest=false \
+            --title 'Lumqenix Community 0.3.0-dev.8 — verified Linux source preview' \
+            --notes-file /tmp/lumqenix-release-notes.md \
+            release-assets/lumqenix-community-0.3.0-dev.8.zip \
+            release-assets/SHA256SUMS release-assets/provenance.json \
+            release-assets/release-evidence.json release-assets/installed-preview-smoke.json \
+            release-assets/pretrained-cpu-benchmark.json release-assets/cpu-benchmark.json

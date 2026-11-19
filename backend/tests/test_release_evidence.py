@@ -1,9 +1,10 @@
 """Release evidence gate regression tests: no fabricated passes."""
 from copy import deepcopy
+import hashlib
 
 import pytest
 
-from scripts.validate_release_evidence import EvidenceError, validate, validate_scene_bundle
+from scripts.validate_release_evidence import EvidenceError, validate, validate_scene_bundle, validate_image_manifest
 
 
 def good_documents():
@@ -147,3 +148,57 @@ def test_nontexture_bicubic_psnr_must_be_finite_numeric(scene, invalid):
         reports[scene]["models"][model]["quality"]["baseline_metrics"]["psnr_rgb_db"] = invalid
     with pytest.raises(EvidenceError):
         validate_scene_bundle(performance, reports, api)
+
+
+def good_image_manifest():
+    names = {"reference-hr.png": [256, 256], "input-lr.png": [128, 128],
+             "bicubic-2x.png": [256, 256], "models/fsrcnn-2x.png": [256, 256],
+             "models/espcn-2x.png": [256, 256]}
+    return {"dataset": "deterministic-synthetic-textures-v1",
+            "images": {name: {"dimensions": dims, "sha256": "a" * 64, "bytes": 123}
+                       for name, dims in names.items()}}
+
+
+def test_valid_paired_manifest():
+    assert validate_image_manifest(good_image_manifest())["paired_images_verified"] == 5
+
+
+@pytest.mark.parametrize("mutation", ["missing", "extra", "dimensions", "hash", "bytes", "dataset"])
+def test_paired_manifest_rejects_incomplete_evidence(mutation):
+    manifest = good_image_manifest()
+    images = manifest["images"]
+    if mutation == "missing":
+        images.pop("input-lr.png")
+    elif mutation == "extra":
+        images["unknown.png"] = images["input-lr.png"]
+    elif mutation == "dimensions":
+        images["input-lr.png"]["dimensions"] = [256, 256]
+    elif mutation == "hash":
+        images["reference-hr.png"]["sha256"] = "not-a-hash"
+    elif mutation == "bytes":
+        images["bicubic-2x.png"]["bytes"] = True
+    else:
+        manifest["dataset"] = "wrong"
+    with pytest.raises(EvidenceError):
+        validate_image_manifest(manifest)
+
+
+def test_downloaded_paired_images_are_hashed_and_sized(tmp_path):
+    manifest = good_image_manifest()
+    for name, entry in manifest["images"].items():
+        file = tmp_path / name
+        file.parent.mkdir(parents=True, exist_ok=True)
+        payload = ("image:" + name).encode()
+        file.write_bytes(payload)
+        entry["bytes"] = len(payload)
+        entry["sha256"] = hashlib.sha256(payload).hexdigest()
+    assert validate_image_manifest(manifest, tmp_path)["paired_images_verified"] == 5
+
+    target = tmp_path / "models" / "fsrcnn-2x.png"
+    target.write_bytes(b"corrupted")
+    with pytest.raises(EvidenceError, match="do not match"):
+        validate_image_manifest(manifest, tmp_path)
+
+    target.unlink()
+    with pytest.raises(EvidenceError, match="missing or unsafe"):
+        validate_image_manifest(manifest, tmp_path)

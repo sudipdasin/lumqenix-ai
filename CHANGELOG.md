@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0-dev.8 — Verified Linux source preview (2026-11-19)
+- Add no-root installation, supervised localhost Studio/API launch, and safe environment uninstall.
+- Build deterministic source ZIPs with per-file integrity manifests, exact commit provenance, SHA256 verification and extracted-install smoke tests.
+- Integrate the independently tested paired-image manifest gate without removing Community contracts, private-edition separation or CPU video budgets.
+- Publish a GitHub development prerelease only after the full CPU/real-model/video/evidence and source-package gates pass.
+- Preserve experimental status: physical 4 GB hardware, broad portrait fidelity, Windows/GPU and pretrained ONNX remain unverified. No stable or final release claim.
+- **Verification:** exact test and benchmark outputs are attached to the publishing workflow and prerelease; do not infer success from this entry alone.
+
+
 ## Unreleased — Reject stale pretrained benchmark output (2026-11-17)
 - Remove prior model output before launching each worker, preventing a previous PNG from being accepted as fresh evidence.
 - Report output cleanup errors per model and continue independent model evaluation.

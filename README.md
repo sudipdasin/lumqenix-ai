@@ -1,6 +1,6 @@
 # Lumqenix AI — Community (Studio Lite)
 
-Local image and video enhancement for CPU use. Current build: **0.3.0-dev.7**, an evidence-backed development build, not a production release candidate. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
+Local image and video enhancement for CPU use. Current build: **0.3.0-dev.8**, an evidence-backed development build, not a production release candidate. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
 
 ## Editions and open-source participation
 
@@ -35,6 +35,24 @@ commercial build and entitlement service are not yet available.
 | Video | FFmpeg filtering, Lanczos scaling, H.264/AAC output | Real short-video API test |
 
 No GAN, newly trained face model, temporal neural restoration, or true HDR encoding is included. Enhancement cannot guarantee recovery of authentic missing detail.
+
+## Downloadable Linux source preview
+
+The next verified development prerelease is **0.3.0-dev.8**. Download it from
+[GitHub Releases](https://github.com/sudipdasin/lumqenix-ai/releases) after the
+publication workflow passes. Verify `SHA256SUMS`, extract the source ZIP, then:
+
+```bash
+bash scripts/install-linux.sh
+bash scripts/run-linux.sh
+# Stop with Ctrl+C; remove only the installed environment when finished:
+bash scripts/uninstall-linux.sh
+```
+
+See [Linux preview instructions](docs/LINUX_PREVIEW.md) and
+[release notes](docs/RELEASE_NOTES_0.3.0-dev.8.md). This source preview installs
+Python dependencies from the internet; it is not a standalone binary or a
+certified production RC. Existing manual startup remains supported.
 
 ## Run locally
 
@@ -126,4 +144,4 @@ Missing real weights are explicitly skipped in tests. CI runs Python 3.10/3.12 w
 
 ## Remaining release gates
 
-Physical 4 GB laptop validation, representative user-portrait A/B approval, and a compatible pretrained ONNX model evaluation remain open. Windows, GPU execution, long-duration video quality, hostile traffic, and multi-user deployment are unverified. The process lock does not bound multipart upload parsing or total host/browser memory. This application is intended for local single-user use; a public service needs a separate deployment and resource-isolation design. No final release is published.
+Physical 4 GB laptop validation, representative user-portrait A/B approval, and a compatible pretrained ONNX model evaluation remain open. Windows, GPU execution, long-duration video quality, hostile traffic, and multi-user deployment are unverified. The process lock does not bound multipart upload parsing or total host/browser memory. This application is intended for local single-user use; a public service needs a separate deployment and resource-isolation design. Development previews may be published after their automated gates pass; no stable release is certified.
