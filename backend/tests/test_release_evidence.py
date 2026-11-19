@@ -1,5 +1,6 @@
 """Release evidence gate regression tests: no fabricated passes."""
 from copy import deepcopy
+import hashlib
 
 import pytest
 
@@ -180,3 +181,24 @@ def test_paired_manifest_rejects_incomplete_evidence(mutation):
         manifest["dataset"] = "wrong"
     with pytest.raises(EvidenceError):
         validate_image_manifest(manifest)
+
+
+def test_downloaded_paired_images_are_hashed_and_sized(tmp_path):
+    manifest = good_image_manifest()
+    for name, entry in manifest["images"].items():
+        file = tmp_path / name
+        file.parent.mkdir(parents=True, exist_ok=True)
+        payload = ("image:" + name).encode()
+        file.write_bytes(payload)
+        entry["bytes"] = len(payload)
+        entry["sha256"] = hashlib.sha256(payload).hexdigest()
+    assert validate_image_manifest(manifest, tmp_path)["paired_images_verified"] == 5
+
+    target = tmp_path / "models" / "fsrcnn-2x.png"
+    target.write_bytes(b"corrupted")
+    with pytest.raises(EvidenceError, match="do not match"):
+        validate_image_manifest(manifest, tmp_path)
+
+    target.unlink()
+    with pytest.raises(EvidenceError, match="missing or unsafe"):
+        validate_image_manifest(manifest, tmp_path)
