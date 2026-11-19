@@ -34,7 +34,7 @@ jobs:
           python -m pip install "opencv-contrib-python-headless>=4.9,<5" "onnxruntime>=1.18,<2" onnx
           python scripts/fetch_test_models.py --output-dir /tmp/lumqenix-models
       - name: Install FFmpeg with H.264 encoding support
-        timeout-minutes: 8
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           if command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1 && \
@@ -109,20 +109,26 @@ jobs:
           import json
           import math
           from pathlib import Path
-          data = json.loads(Path("pretrained-quality.json").read_text())
-          assert data["reference_dimensions"] == [256, 256]
-          assert data["low_resolution_dimensions"] == [128, 128]
-          assert data["baseline_bicubic"]["mae_rgb"] > 0
-          for name in ("fsrcnn", "espcn"):
-              item = data["models"][name]
-              assert item["execution"]["status"] == "ok", (name, item)
-              quality = item["quality"]
-              assert quality["dimensions"] == [256, 256]
-              for key in ("prediction_metrics", "baseline_metrics"):
-                  metrics = quality[key]
-                  assert math.isfinite(metrics["mae_rgb"])
-                  assert math.isfinite(metrics["mse_rgb"])
-                  assert metrics["psnr_rgb_db"] is None or math.isfinite(metrics["psnr_rgb_db"])
+          for scene, filename in (
+              ("textures", "pretrained-quality.json"),
+              ("edges", "pretrained-quality-edges.json"),
+              ("smooth", "pretrained-quality-smooth.json"),
+          ):
+              data = json.loads(Path(filename).read_text())
+              assert data["reference_dimensions"] == [256, 256], scene
+              assert data["low_resolution_dimensions"] == [128, 128], scene
+              assert math.isfinite(data["baseline_bicubic"]["mae_rgb"]), scene
+              assert data["baseline_bicubic"]["mae_rgb"] > 0, scene
+              for name in ("fsrcnn", "espcn"):
+                  item = data["models"][name]
+                  assert item["execution"]["status"] == "ok", (scene, name, item)
+                  quality = item["quality"]
+                  assert quality["dimensions"] == [256, 256], (scene, name)
+                  for key in ("prediction_metrics", "baseline_metrics"):
+                      metrics = quality[key]
+                      assert math.isfinite(metrics["mae_rgb"]) and metrics["mae_rgb"] >= 0, (scene, name, key)
+                      assert math.isfinite(metrics["mse_rgb"]) and metrics["mse_rgb"] >= 0, (scene, name, key)
+                      assert metrics["psnr_rgb_db"] is None or math.isfinite(metrics["psnr_rgb_db"]), (scene, name, key)
           PY
       - name: Verify paired image evidence and record hashes
         if: matrix.neural && matrix.python == '3.12'
@@ -210,8 +216,8 @@ jobs:
 
   video-integration:
     name: Real FFmpeg integration
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend
@@ -232,8 +238,8 @@ jobs:
              ffmpeg -hide_banner -encoders 2>/dev/null | grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)'; then
             echo "Preinstalled FFmpeg supports libx264; skipping apt"
           else
-            sudo timeout 240s apt-get -o Acquire::Retries=2 update -qq
-            sudo timeout 240s apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=2 install -y ffmpeg libavcodec-extra
+            sudo timeout 600s apt-get -o Acquire::Retries=2 update -qq
+            sudo timeout 600s apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=2 install -y ffmpeg libavcodec-extra
           fi
       - name: Require FFmpeg with H.264 encoder
         run: |
