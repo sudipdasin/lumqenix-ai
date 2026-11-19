@@ -13,6 +13,14 @@ jobs:
             bash -n scripts/run-linux.sh
             test -s LICENSE
       - run:
+          name: Install actual FFmpeg video integration dependencies
+          command: |
+            sudo apt-get update -qq
+            sudo apt-get install -y ffmpeg libavcodec-extra
+            command -v ffmpeg
+            command -v ffprobe
+            ffmpeg -hide_banner -encoders | grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)'
+      - run:
           name: Install application and test dependencies
           command: |
             bash scripts/install-linux.sh
