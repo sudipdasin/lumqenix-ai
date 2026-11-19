@@ -1,6 +1,25 @@
 # Lumqenix AI — Community (Studio Lite)
 
-Local image and video enhancement for CPU use. Current build: **0.3.0-dev.7**, an evidence-backed development build, not a production release candidate. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
+Local image and video enhancement for CPU use. Integrated preview candidate: **0.3.0-rc.1**, pending independent CI and install validation on this exact branch; not yet a certified production release. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
+
+## Linux integrated RC preview (verification candidate)
+
+This branch combines Community development, the Linux source installer, and
+paired-image benchmark provenance checks. **It is not a tagged or final release.**
+After the branch CI passes, Linux testers can install locally without root:
+
+```bash
+git clone --branch preview/v0.3.0-rc.1-integrated https://github.com/sudipdasin/lumqenix-ai.git
+cd lumqenix-ai
+bash scripts/install-linux.sh
+bash scripts/run-linux.sh
+```
+
+Open http://127.0.0.1:8080. FFmpeg/ffprobe are needed for video.
+The installer keeps dependencies in `.venv` and starts local loopback-only
+services, not a system daemon. Uninstall by removing the cloned directory.
+Optional pretrained models are **not bundled**; do not infer superior fidelity
+or 4 GB system compatibility from CI process-RSS measurements alone.
 
 ## Editions and open-source participation
 
