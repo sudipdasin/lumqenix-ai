@@ -1,13 +1,13 @@
 # Lumqenix AI — Studio Lite
 
-Local image and video enhancement for CPU use. Preview branch build: **0.3.0-rc.1 (beta preview)**. This is an **experimental, unverified release candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
+Local image and video enhancement for CPU use. Preview branch build: **0.3.0-rc.2 (beta preview)**. This is an **experimental, unverified release candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
 
 ## Linux beta preview — install and feedback
 
-**Release channel:** `preview/v0.3.0-rc.1-beta`. This is a source-installable beta, **not a verified production binary**. On Linux with Python 3.10+:
+**Release channel:** `preview/v0.3.0-rc.2-beta`. This is a source-installable beta, **not a verified production binary**. On Linux with Python 3.10+:
 
 ```bash
-git clone --branch preview/v0.3.0-rc.1-beta https://github.com/sudipdasin/lumqenix-ai.git
+git clone --branch preview/v0.3.0-rc.2-beta https://github.com/sudipdasin/lumqenix-ai.git
 cd lumqenix-ai
 bash scripts/install-linux.sh
 bash scripts/run-linux.sh
