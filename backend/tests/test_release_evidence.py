@@ -147,3 +147,18 @@ def test_nontexture_bicubic_psnr_must_be_finite_numeric(scene, invalid):
         reports[scene]["models"][model]["quality"]["baseline_metrics"]["psnr_rgb_db"] = invalid
     with pytest.raises(EvidenceError):
         validate_scene_bundle(performance, reports, api)
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda p, q, a: q.__setitem__("edges", None),
+    lambda p, q, a: q["edges"].__setitem__("models", None),
+    lambda p, q, a: q["smooth"]["models"].__setitem__("fsrcnn", None),
+    lambda p, q, a: q["edges"]["models"]["espcn"].__setitem__("execution", None),
+    lambda p, q, a: q["smooth"]["models"]["fsrcnn"].__setitem__("quality", None),
+    lambda p, q, a: q["edges"]["models"]["espcn"]["quality"].__setitem__("baseline_metrics", None),
+])
+def test_malformed_multiscene_evidence_fails_closed(mutate):
+    documents = list(deepcopy(good_scene_bundle()))
+    mutate(*documents)
+    with pytest.raises(EvidenceError):
+        validate_scene_bundle(*documents)
