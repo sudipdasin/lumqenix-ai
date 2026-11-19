@@ -314,3 +314,29 @@ jobs:
           name: release-evidence-gate
           path: release-evidence.json
           if-no-files-found: warn
+
+  history-audit:
+    name: Full reachable-history publication screen
+    if: github.event_name == 'push' && github.ref == 'refs/heads/preview/v0.3.0-rc.1-integrated'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify complete checkout and Community-only sources
+        run: |
+          git rev-parse --is-shallow-repository | grep -qx false
+          python scripts/check_edition_boundary.py
+      - name: Audit reachable Git object history for high-confidence publication hazards
+        run: python scripts/audit_publication.py --history > history-audit.json
+      - name: Retain audit evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-history-publication-audit
+          path: history-audit.json
+          if-no-files-found: warn
