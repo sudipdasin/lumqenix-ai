@@ -162,12 +162,14 @@ jobs:
             backend/pretrained-quality-edges.json
             backend/pretrained-quality-smooth.json
             backend/pretrained-quality-manifest.json
-            /tmp/lumqenix-quality/reference-hr.png
-            /tmp/lumqenix-quality/input-lr.png
-            /tmp/lumqenix-quality/bicubic-2x.png
-            /tmp/lumqenix-quality/models/fsrcnn-2x.png
-            /tmp/lumqenix-quality/models/espcn-2x.png
-          if-no-files-found: warn
+          if-no-files-found: error
+      - name: Upload paired image files separately from benchmark JSON
+        if: always() && matrix.neural && matrix.python == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pretrained-paired-images
+          path: /tmp/lumqenix-quality/
+          if-no-files-found: error
       - name: Upload pretrained CPU benchmark evidence
         if: always() && matrix.neural && matrix.python == '3.12'
         uses: actions/upload-artifact@v4
@@ -296,6 +298,11 @@ jobs:
           pattern: '*benchmark*'
           merge-multiple: true
           path: /tmp/lumqenix-evidence
+      - name: Download paired-image evidence from completed neural job
+        uses: actions/download-artifact@v4
+        with:
+          name: pretrained-paired-images
+          path: /tmp/lumqenix-paired-images
       - name: Reject missing, inconsistent, or over-budget evidence
         run: |
           python backend/scripts/validate_release_evidence.py \
@@ -303,7 +310,9 @@ jobs:
             --quality /tmp/lumqenix-evidence/pretrained-quality.json \
             --quality-edges /tmp/lumqenix-evidence/pretrained-quality-edges.json \
             --quality-smooth /tmp/lumqenix-evidence/pretrained-quality-smooth.json \
-            --api /tmp/lumqenix-evidence/cpu-benchmark.json > release-evidence.json
+            --api /tmp/lumqenix-evidence/cpu-benchmark.json \
+            --manifest /tmp/lumqenix-evidence/pretrained-quality-manifest.json \
+            --images-dir /tmp/lumqenix-paired-images > release-evidence.json
           cat release-evidence.json
       - name: Preserve release evidence and six-model comparison report
         if: always()

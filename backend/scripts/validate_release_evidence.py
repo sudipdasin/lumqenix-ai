@@ -8,6 +8,7 @@ This gate checks evidence completeness and 4 GiB process budgets, not that
 models outperform bicubic or preserve identity. Those require external criteria.
 """
 import argparse
+import hashlib
 import json
 import math
 import re
@@ -174,6 +175,41 @@ def summarize_quality(reports):
     return rows
 
 
+
+def validate_image_manifest(manifest, images_dir=None):
+    """Validate paired-image metadata; image bytes must also be checked at capture time."""
+    if manifest.get("dataset") != "deterministic-synthetic-textures-v1":
+        raise EvidenceError("Paired-image manifest dataset mismatch")
+    expected = {
+        "reference-hr.png": [256, 256],
+        "input-lr.png": [128, 128],
+        "bicubic-2x.png": [256, 256],
+        "models/fsrcnn-2x.png": [256, 256],
+        "models/espcn-2x.png": [256, 256],
+    }
+    images = manifest.get("images")
+    if not isinstance(images, dict) or set(images) != set(expected):
+        raise EvidenceError("Paired-image manifest missing or unexpected images")
+    for name, dimensions in expected.items():
+        entry = images[name]
+        if not isinstance(entry, dict) or entry.get("dimensions") != dimensions:
+            raise EvidenceError(f"{name}: invalid manifest dimensions")
+        digest = entry.get("sha256")
+        if not isinstance(digest, str) or re.fullmatch(r"[0-9a-fA-F]{64}", digest) is None:
+            raise EvidenceError(f"{name}: invalid SHA256")
+        size = entry.get("bytes")
+        if isinstance(size, bool) or not isinstance(size, int) or size <= 0:
+            raise EvidenceError(f"{name}: invalid byte length")
+        if images_dir is not None:
+            root = Path(images_dir).resolve()
+            file_path = (root / name).resolve()
+            if not file_path.is_relative_to(root) or not file_path.is_file():
+                raise EvidenceError(f"{name}: paired image file missing or unsafe")
+            actual = file_path.read_bytes()
+            if len(actual) != size or hashlib.sha256(actual).hexdigest().lower() != digest.lower():
+                raise EvidenceError(f"{name}: paired image bytes do not match manifest")
+    return {"paired_images_verified": len(expected)}
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--performance", type=Path, required=True)
@@ -181,6 +217,8 @@ def main():
     parser.add_argument("--api", type=Path, required=True)
     parser.add_argument("--quality-edges", type=Path, required=True)
     parser.add_argument("--quality-smooth", type=Path, required=True)
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--images-dir", type=Path, required=True)
     args = parser.parse_args()
     try:
         documents = [json.loads(path.read_text()) for path in (args.performance, args.quality, args.api)]
@@ -188,6 +226,7 @@ def main():
                    "edges": json.loads(args.quality_edges.read_text()),
                    "smooth": json.loads(args.quality_smooth.read_text())}
         result = validate_scene_bundle(documents[0], reports, documents[2])
+        result.update(validate_image_manifest(json.loads(args.manifest.read_text()), args.images_dir))
         print(json.dumps(result, indent=2))
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.exit(1, f"Release evidence gate failed: {exc}\n")
