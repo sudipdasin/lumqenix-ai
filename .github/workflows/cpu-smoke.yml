@@ -11,8 +11,8 @@ jobs:
       matrix:
         python: ['3.10', '3.12']
         neural: [false, true]
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: backend
@@ -41,8 +41,8 @@ jobs:
              ffmpeg -hide_banner -encoders 2>/dev/null | grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)'; then
             echo "Existing FFmpeg already supports libx264; skipping apt"
           else
-            sudo timeout 240s apt-get -o Acquire::Retries=2 update -qq
-            sudo timeout 240s apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=2 install -y ffmpeg libavcodec-extra
+            sudo timeout 600s apt-get -o Acquire::Retries=2 update -qq
+            sudo timeout 600s apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=2 install -y ffmpeg libavcodec-extra
           fi
       - name: Verify real video integration prerequisites
         run: |
