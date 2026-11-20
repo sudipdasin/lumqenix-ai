@@ -228,8 +228,9 @@ jobs:
 
   video-integration:
     name: Real FFmpeg integration
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
+    # Pin the LTS runner: Ubuntu 26 apt mirrors stalled while downloading codecs.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: backend
@@ -248,8 +249,8 @@ jobs:
              ffmpeg -hide_banner -encoders 2>/dev/null | grep -Eq '(^|[[:space:]])libx264([[:space:]]|$)'; then
             echo 'Using runner FFmpeg with libx264'
           else
-            timeout 180s sudo apt-get update -qq
-            timeout 180s sudo apt-get install -y --no-install-recommends ffmpeg libavcodec-extra
+            timeout 150s sudo apt-get update -qq
+            timeout 420s sudo apt-get install -y --no-install-recommends ffmpeg libavcodec-extra
           fi
       - name: Require FFmpeg with H.264 encoder
         run: |
