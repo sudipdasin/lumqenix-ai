@@ -8,11 +8,14 @@ This gate checks evidence completeness and 4 GiB process budgets, not that
 models outperform bicubic or preserve identity. Those require external criteria.
 """
 import argparse
+import io
 import hashlib
 import json
 import math
 import re
 from pathlib import Path
+
+from PIL import Image, UnidentifiedImageError
 
 
 class EvidenceError(ValueError):
@@ -230,6 +233,15 @@ def validate_image_manifest(manifest, images_dir=None):
             actual = file_path.read_bytes()
             if len(actual) != size or hashlib.sha256(actual).hexdigest().lower() != digest.lower():
                 raise EvidenceError(f"{name}: paired image bytes do not match manifest")
+            # A matching manifest hash alone does not establish that the artifact
+            # is a readable PNG with the claimed dimensions.
+            try:
+                with Image.open(io.BytesIO(actual)) as image:
+                    if image.format != "PNG" or list(image.size) != dimensions:
+                        raise EvidenceError(f"{name}: PNG format or dimensions mismatch")
+                    image.verify()
+            except (UnidentifiedImageError, OSError, SyntaxError, ValueError) as exc:
+                raise EvidenceError(f"{name}: invalid PNG image evidence") from exc
     return {"paired_images_verified": len(expected)}
 
 def main():
