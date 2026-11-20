@@ -16,7 +16,7 @@ def validate_model_entry(item):
     if not isinstance(item, dict):
         raise ValueError("Invalid pretrained model manifest entry")
     name = item.get("filename")
-    if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_-]+\\.pb", name):
+    if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_-]+[.]pb", name):
         raise ValueError("Unsafe pretrained model filename")
     url = item.get("url")
     parsed = urllib.parse.urlparse(url) if isinstance(url, str) else None
