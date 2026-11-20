@@ -299,3 +299,9 @@ def test_paired_image_bytes_must_decode_as_claimed_png(tmp_path, mutation):
         entry["sha256"] = hashlib.sha256(payload).hexdigest()
     with pytest.raises(EvidenceError, match="PNG"):
         validate_image_manifest(manifest, tmp_path)
+
+
+@pytest.mark.parametrize("invalid", [None, [], "invalid", 42, True])
+def test_paired_image_manifest_rejects_non_mapping_root(invalid):
+    with pytest.raises(EvidenceError, match="must be a mapping"):
+        validate_image_manifest(invalid)
