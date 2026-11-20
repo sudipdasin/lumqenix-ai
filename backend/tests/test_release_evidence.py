@@ -243,3 +243,28 @@ def test_texture_baseline_must_be_a_mapping(invalid):
     quality["baseline_bicubic"] = invalid
     with pytest.raises(EvidenceError):
         validate(performance, quality, api)
+
+
+@pytest.mark.parametrize("alias", ["file", "directory"])
+def test_paired_image_manifest_rejects_internal_symlink_aliases(tmp_path, alias):
+    """A matching hash must not authorize symlinked release evidence."""
+    manifest = good_image_manifest()
+    for name, entry in manifest["images"].items():
+        target = tmp_path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        payload = ("image:" + name).encode()
+        target.write_bytes(payload)
+        entry["bytes"] = len(payload)
+        entry["sha256"] = hashlib.sha256(payload).hexdigest()
+    assert validate_image_manifest(manifest, tmp_path)["paired_images_verified"] == 5
+
+    if alias == "file":
+        original = tmp_path / "reference-hr.png"
+        original.rename(tmp_path / "original.png")
+        original.symlink_to(tmp_path / "original.png")
+    else:
+        original = tmp_path / "models"
+        original.rename(tmp_path / "original-models")
+        original.symlink_to(tmp_path / "original-models", target_is_directory=True)
+    with pytest.raises(EvidenceError, match="missing or unsafe"):
+        validate_image_manifest(manifest, tmp_path)
