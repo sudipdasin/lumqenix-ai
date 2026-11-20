@@ -1,13 +1,13 @@
 # Lumqenix AI — Studio Lite
 
-Local image and video enhancement for CPU use. Preview candidate build: **0.3.0-rc.3 (beta preview)**. This is an **experimental prerelease candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
+Local image and video enhancement for CPU use. Preview candidate build: **0.3.0-rc.4 (beta preview)**. This is an **experimental prerelease candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
 
 ## Linux beta preview — install and feedback
 
-**Release channel:** `preview/v0.3.0-rc.3-beta`. This is a source-installable beta, **not a verified production binary**. On Linux with Python 3.10+:
+**Release channel:** `preview/v0.3.0-rc.4-beta`. This is a source-installable beta, **not a verified production binary**. On Linux with Python 3.10+:
 
 ```bash
-git clone --branch preview/v0.3.0-rc.3-beta https://github.com/sudipdasin/lumqenix-ai.git
+git clone --branch preview/v0.3.0-rc.4-beta https://github.com/sudipdasin/lumqenix-ai.git
 cd lumqenix-ai
 bash scripts/install-linux.sh
 bash scripts/run-linux.sh
@@ -15,7 +15,7 @@ bash scripts/run-linux.sh
 
 Open http://127.0.0.1:8080. The installer uses a local `.venv` without root permissions. FFmpeg and ffprobe must be installed separately for video processing. Stop with Ctrl+C. To remove the local installation, delete the cloned directory; no system service is installed. No pretrained weights are included by default.
 
-**Artifact verification:** Successful GitHub Actions preview runs produce a source ZIP and a matching `.sha256` checksum file. In the download directory, run `sha256sum -c lumqenix-community-v0.3.0-rc.3-source.zip.sha256` before extracting the CI artifact. The GitHub branch ZIP linked above is a separate automatically generated archive and is **not** covered by that CI checksum. Do not treat an artifact as validated until the workflow run has passed.
+**Artifact verification:** Successful GitHub Actions preview runs produce a source ZIP and a matching `.sha256` checksum file. In the download directory, run `sha256sum -c lumqenix-community-v0.3.0-rc.4-source.zip.sha256` before extracting the CI artifact. The GitHub branch ZIP linked above is a separate automatically generated archive and is **not** covered by that CI checksum. Do not treat an artifact as validated until the workflow run has passed.
 
 **Distribution note:** the Community repository is public, and tagged beta releases provide verified source ZIP assets once the exact-commit CI and packaging gates pass. This branch is an RC3 candidate, not a native installer or stable release. Do not expose the local API to the public internet.
 
@@ -29,6 +29,7 @@ Report sanitized bugs and suggestions through [GitHub Issues](https://github.com
 | FSRCNN | Pretrained neural 2× CPU inference | Real weights and API tested |
 | ESPCN | Pretrained neural 2× CPU inference | Real weights and API tested |
 | Portrait v2/v3 | FSRCNN with optional denoising and luminance sharpening | Experimental; filters can reduce fidelity |
+| Portrait Guard v4 | Optional FSRCNN/bicubic blend minimizing input downsampling-cycle MSE | Experimental LR-consistency safeguard, not proof of facial fidelity |
 | ONNX | Optional tiled 2×/4× neural adapter | Real runtime plumbing tested; no pretrained ONNX model certified |
 | Video | FFmpeg filtering, Lanczos scaling, H.264/AAC output | Real short-video API test |
 
@@ -74,7 +75,7 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 PowerShell users should set `$env:LUMQENIX_FSRCNN_MODEL` and `$env:LUMQENIX_ESPCN_MODEL` instead of `export`, and choose a suitable local model directory. Model provenance and hashes live in `backend/models/pretrained.json`. Review upstream licensing before distributing weights.
 
-Portrait v3 strength 0 is exactly baseline FSRCNN; higher strengths add filters, not new learned detail. Keep baseline available and inspect eyes, teeth, hair, skin texture, and color at equal output sizes.
+Portrait v3 strength 0 is exactly baseline FSRCNN; higher strengths add filters, not new learned detail. Portrait Guard v4 strength 0 gives bicubic; higher strength allows more neural detail only when it does not increase the measured downsampling-cycle error versus bicubic. This proxy is not a ground-truth high-resolution or facial-identity metric. Keep baseline available and inspect eyes, teeth, hair, skin texture, and color at equal output sizes.
 
 ## Optional ONNX adapter
 

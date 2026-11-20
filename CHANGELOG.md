@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.0-rc.4 — Experimental portrait consistency and evidence hardening (2026-11-21)
+- Add opt-in FSRCNN Portrait Guard v4, selecting a bounded neural/bicubic blend by source-image reconstruction-cycle MSE. A bicubic candidate always participates, so the selected result cannot score worse on the defined LR-cycle metric than the local bicubic baseline; this does **not** imply higher-resolution fidelity or facial-identity improvement.
+- Preserve default Portrait v2/v3 behavior and current CPU video workload protections; add explicit v4 UI selection and report the chosen neural contribution in an API response header.
+- Add local and configured-real-model regression tests for guarded inference, plus reproducible pinned-weight CPU benchmark artifacts for v4 versus bicubic LR consistency.
+- Strengthen release evidence against malformed, non-RGB, misdimensioned or truncated PNG artifacts, internal symlink aliases and excessively large claimed image data; stream SHA-256 in 1 MiB chunks instead of reading entire images into memory.
+- Publish only after all four Python lanes, actual FFmpeg/video tests, frontend, security boundary/history checks, model/evidence and exact-commit Linux installer smoke pass; no production/stable or verified face-identity claims.
+
+
 ## v0.3.0-rc.3 — CPU video workload and release reliability candidate (2026-11-20)
 - Restore previously validated FFprobe frame-rate, nominal-rate and declared-frame-count preflight on the RC2 video path, preserving its independent 60-second FFmpeg output clamp.
 - Reject excessive video compute requests (1,800 estimated frames or 450 million estimated output samples) before encoding on constrained Community CPUs, including missing FPS, variable-frame-rate discrepancies and malformed values.

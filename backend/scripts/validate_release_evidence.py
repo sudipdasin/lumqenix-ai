@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import math
+from PIL import Image, UnidentifiedImageError
 import re
 from pathlib import Path
 
@@ -216,12 +217,30 @@ def validate_image_manifest(manifest, images_dir=None):
             raise EvidenceError(f"{name}: invalid byte length")
         if images_dir is not None:
             root = Path(images_dir).resolve()
-            file_path = (root / name).resolve()
-            if not file_path.is_relative_to(root) or not file_path.is_file():
+            original_path = root / name
+            file_path = original_path.resolve()
+            # Reject symlink aliases, including internal links that remain
+            # inside the artifact directory. ZIP evidence must be self-contained.
+            if (not file_path.is_relative_to(root) or not file_path.is_file()
+                    or original_path.is_symlink()
+                    or any(parent.is_symlink() for parent in list(original_path.parents)[:-1])):
                 raise EvidenceError(f"{name}: paired image file missing or unsafe")
-            actual = file_path.read_bytes()
-            if len(actual) != size or hashlib.sha256(actual).hexdigest().lower() != digest.lower():
+            if size > 16 * 1024 * 1024 or file_path.stat().st_size != size:
                 raise EvidenceError(f"{name}: paired image bytes do not match manifest")
+            # Avoid loading attacker-controlled image evidence into RAM.
+            hasher = hashlib.sha256()
+            with file_path.open("rb") as source:
+                for block in iter(lambda: source.read(1024 * 1024), b""):
+                    hasher.update(block)
+            if hasher.hexdigest().lower() != digest.lower():
+                raise EvidenceError(f"{name}: paired image bytes do not match manifest")
+            try:
+                with Image.open(file_path) as image:
+                    if image.format != "PNG" or list(image.size) != dimensions or image.mode != "RGB":
+                        raise EvidenceError(f"{name}: PNG format, mode or dimensions mismatch")
+                    image.verify()
+            except (UnidentifiedImageError, OSError, SyntaxError, ValueError, Image.DecompressionBombError) as exc:
+                raise EvidenceError(f"{name}: invalid PNG image evidence") from exc
     return {"paired_images_verified": len(expected)}
 
 def main():

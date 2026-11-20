@@ -1,6 +1,9 @@
 """Release evidence gate regression tests: no fabricated passes."""
 from copy import deepcopy
 import hashlib
+import io
+
+from PIL import Image
 
 import pytest
 
@@ -217,12 +220,18 @@ def test_paired_manifest_rejects_incomplete_evidence(mutation):
         validate_image_manifest(manifest)
 
 
+def png_bytes(dimensions):
+    buffer = io.BytesIO()
+    Image.new("RGB", tuple(dimensions), color=(13, 27, 39)).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
 def test_downloaded_paired_images_are_hashed_and_sized(tmp_path):
     manifest = good_image_manifest()
     for name, entry in manifest["images"].items():
         file = tmp_path / name
         file.parent.mkdir(parents=True, exist_ok=True)
-        payload = ("image:" + name).encode()
+        payload = png_bytes(entry["dimensions"])
         file.write_bytes(payload)
         entry["bytes"] = len(payload)
         entry["sha256"] = hashlib.sha256(payload).hexdigest()
@@ -235,4 +244,61 @@ def test_downloaded_paired_images_are_hashed_and_sized(tmp_path):
 
     target.unlink()
     with pytest.raises(EvidenceError, match="missing or unsafe"):
+        validate_image_manifest(manifest, tmp_path)
+
+
+@pytest.mark.parametrize("mutation", ["invalid_png", "wrong_dimensions", "truncated_png", "wrong_mode"])
+def test_paired_image_bytes_must_decode_as_claimed_rgb_png(tmp_path, mutation):
+    manifest = good_image_manifest()
+    for name, entry in manifest["images"].items():
+        target = tmp_path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        payload = png_bytes(entry["dimensions"])
+        if name == "reference-hr.png":
+            if mutation == "invalid_png":
+                payload = b"not a PNG file"
+            elif mutation == "wrong_dimensions":
+                payload = png_bytes([32, 32])
+            elif mutation == "truncated_png":
+                payload = payload[:40]
+            else:
+                buffer = io.BytesIO()
+                Image.new("L", (256, 256), color=13).save(buffer, format="PNG")
+                payload = buffer.getvalue()
+        target.write_bytes(payload)
+        entry["bytes"] = len(payload)
+        entry["sha256"] = hashlib.sha256(payload).hexdigest()
+    with pytest.raises(EvidenceError, match="PNG"):
+        validate_image_manifest(manifest, tmp_path)
+
+
+def test_paired_image_rejects_symlinks_inside_artifact_root(tmp_path):
+    manifest = good_image_manifest()
+    for name, entry in manifest["images"].items():
+        target = tmp_path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        payload = png_bytes(entry["dimensions"])
+        target.write_bytes(payload)
+        entry["bytes"] = len(payload)
+        entry["sha256"] = hashlib.sha256(payload).hexdigest()
+    aliased = tmp_path / "models" / "fsrcnn-2x.png"
+    aliased.unlink()
+    original = tmp_path / "internal-original.png"
+    original.write_bytes(png_bytes([256, 256]))
+    aliased.symlink_to(original)
+    with pytest.raises(EvidenceError, match="missing or unsafe"):
+        validate_image_manifest(manifest, tmp_path)
+
+
+def test_paired_image_rejects_overlarge_metadata_without_loading(tmp_path, monkeypatch):
+    manifest = good_image_manifest()
+    for name, entry in manifest["images"].items():
+        target = tmp_path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        payload = png_bytes(entry["dimensions"])
+        target.write_bytes(payload)
+        entry["bytes"] = len(payload)
+        entry["sha256"] = hashlib.sha256(payload).hexdigest()
+    manifest["images"]["reference-hr.png"]["bytes"] = 20 * 1024 * 1024
+    with pytest.raises(EvidenceError, match="do not match"):
         validate_image_manifest(manifest, tmp_path)

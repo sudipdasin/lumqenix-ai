@@ -39,7 +39,7 @@ def test_pretrained_portrait_strength(source, strength):
     else:
         assert np.asarray(result).std() > 20
 
-@pytest.mark.parametrize('version,strength', [(2,35), (3,0), (3,35), (3,100)])
+@pytest.mark.parametrize('version,strength', [(2,35), (3,0), (3,35), (3,100), (4,0), (4,35), (4,100)])
 def test_pretrained_portrait_api(source, version, strength):
     if not os.getenv('LUMQENIX_FSRCNN_MODEL'):
         pytest.skip('FSRCNN pretrained weights not configured')
@@ -49,5 +49,22 @@ def test_pretrained_portrait_api(source, version, strength):
         files={'file': ('portrait.png', data.getvalue(), 'image/png')},
         data={'portrait':'true', 'portrait_version':version, 'strength':strength})
     assert response.status_code == 200, response.text
-    expected = fsrcnn.upscale(source, portrait=True if version == 2 else 'v3', strength=strength)
+    expected = fsrcnn.upscale(source, portrait=True if version == 2 else 'v3' if version == 3 else 'v4', strength=strength)
+    if version == 4:
+        assert float(response.headers['x-lumqenix-guard-neural-weight']) <= strength / 100
     np.testing.assert_array_equal(np.asarray(Image.open(io.BytesIO(response.content))), np.asarray(expected))
+
+
+def test_pretrained_portrait_guard_preserves_lr_cycle_consistency(source):
+    if not os.getenv('LUMQENIX_FSRCNN_MODEL'):
+        pytest.skip('FSRCNN pretrained weights not configured')
+    import cv2
+    low = cv2.cvtColor(np.asarray(source), cv2.COLOR_RGB2BGR)
+    bicubic = cv2.resize(low, (source.width * 2, source.height * 2), interpolation=cv2.INTER_CUBIC)
+    result = fsrcnn.upscale(source, portrait='v4', strength=100)
+    guarded = cv2.cvtColor(np.asarray(result), cv2.COLOR_RGB2BGR)
+    def mse(high):
+        down = cv2.resize(high, (source.width, source.height), interpolation=cv2.INTER_AREA)
+        return float(np.square(down.astype(np.float32) - low.astype(np.float32)).mean())
+    assert mse(guarded) <= mse(bicubic) + 1e-6
+    assert 0 <= result.info['neural_weight'] <= 1

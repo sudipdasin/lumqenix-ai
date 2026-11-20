@@ -9,6 +9,7 @@ import os
 import cv2
 import numpy as np
 from PIL import Image, ImageOps
+from .fidelity_guard import guarded_blend
 
 MODEL_ENV = "LUMQENIX_FSRCNN_MODEL"
 MAX_INPUT_PIXELS = 512 * 512
@@ -39,7 +40,7 @@ def _model(path):
     return sr
 
 def upscale(image, portrait=False, strength=35):
-    if not isinstance(strength, int) or not 0 <= strength <= 100:
+    if isinstance(strength, bool) or not isinstance(strength, int) or not 0 <= strength <= 100:
         raise ValueError('Portrait strength must be between 0 and 100')
     path = model_path()
     if path is None:
@@ -50,12 +51,12 @@ def upscale(image, portrait=False, strength=35):
     bgr = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR)
     if portrait == 'v3' and strength == 0:
         portrait = False
-    if portrait:
+    if portrait and portrait != "v4":
         # Gentle edge-preserving cleanup BEFORE neural inference.
         sigma = 12 if portrait is True else 4 + strength * 0.08
         bgr = cv2.bilateralFilter(bgr, d=5, sigmaColor=sigma, sigmaSpace=3)
     result = _model(str(path)).upsample(bgr)
-    if portrait:
+    if portrait and portrait != "v4":
         # Small luminance-only unsharp mask; preserve chroma and avoid harsh halos.
         lab = cv2.cvtColor(result, cv2.COLOR_BGR2LAB)
         l, a, b = cv2.split(lab)
@@ -65,4 +66,9 @@ def upscale(image, portrait=False, strength=35):
         result = cv2.cvtColor(cv2.merge((boosted, a, b)), cv2.COLOR_LAB2BGR)
     if result.shape[:2] != (image.height * 2, image.width * 2):
         raise RuntimeError("FSRCNN model returned unexpected dimensions")
-    return Image.fromarray(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
+    if portrait == "v4":
+        result, weight, _ = guarded_blend(bgr, result, strength=strength)
+    output = Image.fromarray(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
+    if portrait == "v4":
+        output.info["neural_weight"] = weight
+    return output
