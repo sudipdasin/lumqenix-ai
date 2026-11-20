@@ -45,8 +45,13 @@ def test_real_ffmpeg_video_roundtrip(tmp_path):
     output.write_bytes(response.content)
     probe = subprocess.run(
         [ffprobe, "-v", "error", "-select_streams", "v:0",
-         "-show_entries", "stream=width,height", "-of", "json", str(output)],
+         "-show_entries", "stream=width,height:format=duration", "-of", "json", str(output)],
         check=True, capture_output=True, text=True, timeout=20,
     )
     stream = json.loads(probe.stdout)["streams"][0]
     assert (stream["width"], stream["height"]) == (64, 48)
+
+    # Measure the encoded MP4 rather than trusting the constructed FFmpeg command.
+    # The one-second generated input must remain finite and bounded after processing.
+    duration = float(json.loads(probe.stdout)["format"]["duration"])
+    assert 0 < duration <= 1.5, f"Unexpected encoded output duration: {duration}"
