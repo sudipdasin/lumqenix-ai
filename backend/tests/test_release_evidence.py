@@ -236,3 +236,10 @@ def test_downloaded_paired_images_are_hashed_and_sized(tmp_path):
     target.unlink()
     with pytest.raises(EvidenceError, match="missing or unsafe"):
         validate_image_manifest(manifest, tmp_path)
+
+@pytest.mark.parametrize("invalid", [None, [], "bad", 42])
+def test_texture_baseline_must_be_a_mapping(invalid):
+    performance, quality, api = good_documents()
+    quality["baseline_bicubic"] = invalid
+    with pytest.raises(EvidenceError):
+        validate(performance, quality, api)
