@@ -38,7 +38,9 @@ def validate(performance, quality, api):
         raise EvidenceError("Unexpected quality dataset")
     if quality.get("reference_dimensions") != [256, 256]:
         raise EvidenceError("Unexpected HR reference dimensions")
-    baseline = quality.get("baseline_bicubic", {})
+    baseline = quality.get("baseline_bicubic")
+    if not isinstance(baseline, dict):
+        raise EvidenceError("Invalid bicubic baseline measurements")
     positive(baseline.get("mae_rgb"), "bicubic MAE")
     positive(baseline.get("mse_rgb"), "bicubic MSE")
     baseline_psnr = baseline.get("psnr_rgb_db")
