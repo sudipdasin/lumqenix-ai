@@ -1,13 +1,13 @@
 # Lumqenix AI — Studio Lite
 
-Local image and video enhancement for CPU use. Preview branch build: **0.3.0-rc.2 (beta preview)**. This is an **experimental, unverified release candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
+Local image and video enhancement for CPU use. Preview candidate build: **0.3.0-rc.3 (beta preview)**. This is an **experimental prerelease candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
 
 ## Linux beta preview — install and feedback
 
-**Release channel:** `preview/v0.3.0-rc.2-beta`. This is a source-installable beta, **not a verified production binary**. On Linux with Python 3.10+:
+**Release channel:** `preview/v0.3.0-rc.3-beta`. This is a source-installable beta, **not a verified production binary**. On Linux with Python 3.10+:
 
 ```bash
-git clone --branch preview/v0.3.0-rc.2-beta https://github.com/sudipdasin/lumqenix-ai.git
+git clone --branch preview/v0.3.0-rc.3-beta https://github.com/sudipdasin/lumqenix-ai.git
 cd lumqenix-ai
 bash scripts/install-linux.sh
 bash scripts/run-linux.sh
@@ -15,9 +15,9 @@ bash scripts/run-linux.sh
 
 Open http://127.0.0.1:8080. The installer uses a local `.venv` without root permissions. FFmpeg and ffprobe must be installed separately for video processing. Stop with Ctrl+C. To remove the local installation, delete the cloned directory; no system service is installed. No pretrained weights are included by default.
 
-**Artifact verification:** Successful GitHub Actions preview runs produce a source ZIP and a matching `.sha256` checksum file. In the download directory, run `sha256sum -c lumqenix-community-v0.3.0-rc.2-source.zip.sha256` before extracting the CI artifact. The GitHub branch ZIP linked above is a separate automatically generated archive and is **not** covered by that CI checksum. Do not treat an artifact as validated until the workflow run has passed.
+**Artifact verification:** Successful GitHub Actions preview runs produce a source ZIP and a matching `.sha256` checksum file. In the download directory, run `sha256sum -c lumqenix-community-v0.3.0-rc.3-source.zip.sha256` before extracting the CI artifact. The GitHub branch ZIP linked above is a separate automatically generated archive and is **not** covered by that CI checksum. Do not treat an artifact as validated until the workflow run has passed.
 
-**Important distribution limitation:** the GitHub repository must be set to **Public** by its owner before anonymous users can clone or download this preview. A branch is not a formal GitHub Release or an installable native package. Do not expose the local API to the public internet.
+**Distribution note:** the Community repository is public, and tagged beta releases provide verified source ZIP assets once the exact-commit CI and packaging gates pass. This branch is an RC3 candidate, not a native installer or stable release. Do not expose the local API to the public internet.
 
 Report sanitized bugs and suggestions through [GitHub Issues](https://github.com/sudipdasin/lumqenix-ai/issues/new/choose). Never upload private photos, personal paths, credentials, or sensitive media. Contributions are welcome subject to the repository's MIT license.
 
@@ -91,7 +91,7 @@ Static spatial shapes, alternate channel order/normalization, and arbitrary mode
 
 - Upload limit: 50 MiB; output limit: 12 million pixels.
 - FSRCNN/ESPCN input: at most 262,144 pixels (512×512 equivalent); two OpenCV threads.
-- Video: finite known duration ≤60 seconds, processing timeout 180 seconds, buffered output ≤100 MiB; odd dimensions are padded to even dimensions.
+- Video: finite known duration ≤60 seconds, processing timeout 180 seconds, buffered output ≤100 MiB; odd dimensions are padded to even dimensions. Conservatively reject excess workload beyond 1,800 estimated frames or 450 million estimated output samples; malformed FFprobe FPS/frame-count metadata is rejected before FFmpeg encoding.
 - One analysis/enhancement job per process; overlapping jobs receive HTTP 429. Status remains responsive.
 - Invalid input returns 400/422, oversize input 413, and unavailable engines 503.
 

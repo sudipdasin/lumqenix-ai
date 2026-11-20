@@ -45,7 +45,7 @@ jobs:
             sys.path.insert(0, 'backend')
             from app.main import app
             from app.version import VERSION
-            assert VERSION == '0.3.0-rc.2'
+            assert VERSION == '0.3.0-rc.3'
             assert app.title == 'Lumqenix API'
             PY
 workflows:

@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.3.0-rc.3 — CPU video workload and release reliability candidate (2026-11-20)
+- Restore previously validated FFprobe frame-rate, nominal-rate and declared-frame-count preflight on the RC2 video path, preserving its independent 60-second FFmpeg output clamp.
+- Reject excessive video compute requests (1,800 estimated frames or 450 million estimated output samples) before encoding on constrained Community CPUs, including missing FPS, variable-frame-rate discrepancies and malformed values.
+- Restore the stable Community edition API contract (`GET /api/edition`), with no dependency on private Pro assets.
+- Add endpoint-level regression tests proving CPU-budget rejection happens before FFmpeg runs and the processing lock is released.
+- Decouple four Python CI lanes from repeated FFmpeg system-package installations; keep real H.264 processing in a mandatory dedicated job. Require exact-commit Linux install/package, history, neural and quality evidence gates before experimental prerelease publication.
+- Release is conditional on passing the exact commit's CI; representative portrait identity quality, dependency/legal audit, and a physical 4 GB RAM machine remain outstanding. This is not a stable final release.
+
+
 ## v0.3.0-rc.2 — Beta preview candidate (2026-11-19)
 - Introduce a separate RC2 preview branch without overwriting RC1.
 - Harden multi-scene release-evidence parsing against malformed report structures and add six regression cases.
