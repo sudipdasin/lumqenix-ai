@@ -218,7 +218,13 @@ def validate_image_manifest(manifest, images_dir=None):
             raise EvidenceError(f"{name}: invalid byte length")
         if images_dir is not None:
             root = Path(images_dir).resolve()
-            file_path = (root / name).resolve()
+            candidate = root / name
+            # Reject symlinked image files and intermediate directories, even when
+            # their targets remain inside the evidence root. Evidence must consist
+            # of the exact archived files rather than aliased mutable targets.
+            if any(part.is_symlink() for part in (candidate, *candidate.parents) if part != root and root in part.parents):
+                raise EvidenceError(f"{name}: paired image file missing or unsafe")
+            file_path = candidate.resolve()
             if not file_path.is_relative_to(root) or not file_path.is_file():
                 raise EvidenceError(f"{name}: paired image file missing or unsafe")
             actual = file_path.read_bytes()
