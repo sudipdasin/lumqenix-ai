@@ -197,6 +197,8 @@ def summarize_quality(reports):
 
 def validate_image_manifest(manifest, images_dir=None):
     """Validate paired-image metadata; image bytes must also be checked at capture time."""
+    if not isinstance(manifest, dict):
+        raise EvidenceError("Paired-image manifest must be a mapping")
     if manifest.get("dataset") != "deterministic-synthetic-textures-v1":
         raise EvidenceError("Paired-image manifest dataset mismatch")
     expected = {
