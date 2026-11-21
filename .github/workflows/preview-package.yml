@@ -105,7 +105,6 @@ jobs:
             --source-zip /tmp/lumqenix-community-v0.3.0-rc.5-source.zip \
             --output /tmp/lumqenix-community-v0.3.0-rc.5-linux-installer.run \
             --version v0.3.0-rc.5
-          bash -n /tmp/lumqenix-community-v0.3.0-rc.5-linux-installer.run
           /tmp/lumqenix-community-v0.3.0-rc.5-linux-installer.run \
             --extract-only --prefix "$RUNNER_TEMP/lumqenix-rc5-installer-check"
           test -s "$RUNNER_TEMP/lumqenix-rc5-installer-check/v0.3.0-rc.5/LICENSE"
