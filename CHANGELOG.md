@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.0-rc.5 — Linux installer and CI delivery candidate (2026-11-22)
+- Build a SHA-256 verified, self-extracting Linux `.run` installer from the exact source ZIP and publish both as GitHub Releases assets only after same-commit CI gates pass.
+- Install into versioned per-user directories, refuse overwrites, validate archive paths/symlinks/duplicates and enforce an expansion cap; optional XDG desktop-menu integration with safe removal.
+- Add eleven offline installer security and lifecycle regressions, carry forward desktop integration regressions, and require Linux packaging smoke tests for the generated executable archive.
+- Preserve CPU-first/real-model quality and 4 GiB RSS gating from the successfully validated RC4 predecessor. **Not a fully standalone binary, physical low-memory certification, or stable v1 release.**
+- Keep Community-only assets on the public channel; private Pro source and credentials remain excluded.
+
+
 ## v0.3.0-rc.4 — Experimental portrait consistency and evidence hardening (2026-11-21)
 - Add opt-in FSRCNN Portrait Guard v4, selecting a bounded neural/bicubic blend by source-image reconstruction-cycle MSE. A bicubic candidate always participates, so the selected result cannot score worse on the defined LR-cycle metric than the local bicubic baseline; this does **not** imply higher-resolution fidelity or facial-identity improvement.
 - Preserve default Portrait v2/v3 behavior and current CPU video workload protections; add explicit v4 UI selection and report the chosen neural contribution in an API response header.
