@@ -352,7 +352,7 @@ jobs:
 
   history-audit:
     name: Full reachable-history publication screen
-    if: github.event_name == 'push' && github.ref == 'refs/heads/preview/v0.3.0-rc.4-beta'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/preview/v0.3.0-rc.5-beta'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -377,8 +377,8 @@ jobs:
           if-no-files-found: warn
 
   publish-verified-prerelease:
-    name: Publish verified Linux source prerelease (never stable)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/preview/v0.3.0-rc.4-beta'
+    name: Publish verified Linux installer and source prerelease (never stable)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/preview/v0.3.0-rc.5-beta'
     needs: [test, frontend, video-integration, cpu-benchmark, release-evidence, history-audit]
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -403,7 +403,7 @@ jobs:
 
           repository = os.environ["GITHUB_REPOSITORY"]
           expected_sha = os.environ["GITHUB_SHA"]
-          branch = "preview/v0.3.0-rc.4-beta"
+          branch = "preview/v0.3.0-rc.5-beta"
           url = ("https://api.github.com/repos/" + repository +
                  "/actions/workflows/preview-package.yml/runs?branch=" +
                  urllib.parse.quote(branch, safe="") + "&event=push&per_page=30")
@@ -426,28 +426,33 @@ jobs:
           else:
               raise SystemExit("No successful matching Linux preview run: fail closed")
           PY
-      - name: Retrieve and verify same-SHA source archive and release evidence
+      - name: Retrieve and verify same-SHA installer source archive and release evidence
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p /tmp/lumqenix-release
           gh run download "$(cat /tmp/lumqenix-preview-run-id)" \
             --repo "$GITHUB_REPOSITORY" \
-            --name lumqenix-community-v0.3.0-rc.4-linux-source \
+            --name lumqenix-community-v0.3.0-rc.5-linux-source \
             --dir /tmp/lumqenix-release
           gh run download "$GITHUB_RUN_ID" \
             --repo "$GITHUB_REPOSITORY" \
             --name release-evidence-gate \
             --dir /tmp/lumqenix-release
           cd /tmp/lumqenix-release
-          sha256sum -c lumqenix-community-v0.3.0-rc.4-source.zip.sha256
+          sha256sum -c lumqenix-community-v0.3.0-rc.5-source.zip.sha256
+          sha256sum -c lumqenix-community-v0.3.0-rc.5-linux-installer.run.sha256
+          bash -n lumqenix-community-v0.3.0-rc.5-linux-installer.run
+          ./lumqenix-community-v0.3.0-rc.5-linux-installer.run \
+            --extract-only --prefix /tmp/lumqenix-release-installer-check
+          test -s /tmp/lumqenix-release-installer-check/v0.3.0-rc.5/scripts/run-linux.sh
           python - <<'PY'
           import json
           import zipfile
           from pathlib import Path, PurePosixPath
 
           root = Path("/tmp/lumqenix-release")
-          archive = root / "lumqenix-community-v0.3.0-rc.4-source.zip"
+          archive = root / "lumqenix-community-v0.3.0-rc.5-source.zip"
           assert archive.is_file() and archive.stat().st_size > 0
           with zipfile.ZipFile(archive) as package:
               invalid = [name for name in package.namelist()
@@ -458,7 +463,7 @@ jobs:
                           "frontend/index.html", "scripts/install-linux.sh",
                           "scripts/run-linux.sh"}
               assert required.issubset(entries), sorted(required - entries)
-              assert 'VERSION = "0.3.0-rc.4"' in package.read("backend/app/version.py").decode()
+              assert 'VERSION = "0.3.0-rc.5"' in package.read("backend/app/version.py").decode()
               assert package.testzip() is None, "Source archive corrupted"
               assert not any(name.startswith(("pro_backend/", "pro_models/",
                                               "licensing/", "private/")) for name in entries)
@@ -470,7 +475,7 @@ jobs:
       - name: Publish beta RC tag only (never stable or latest)
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: v0.3.0-rc.4
+          TAG: v0.3.0-rc.5
         run: |
           set -euo pipefail
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
@@ -478,9 +483,14 @@ jobs:
             exit 1
           fi
           cat > /tmp/lumqenix-rc-notes.md <<'NOTES'
-          ## Lumqenix Community v0.3.0-rc.4 — experimental Linux source preview
+          ## Lumqenix Community v0.3.0-rc.5 — experimental Linux source preview
 
-          Free open-source Community beta. Install the included source ZIP on
+          Includes a SHA-256 verified Linux .run source installer, a source ZIP,
+          checksums, and release evidence. Install the .run using:
+          bash lumqenix-community-v0.3.0-rc.5-linux-installer.run
+          (Python 3.10+ and network access are needed for dependency installation;
+          video requires system FFmpeg). The .run is not a standalone binary.
+          Alternatively install the included source ZIP on
           Linux with Python 3.10+ using bash scripts/install-linux.sh, then
           launch locally using bash scripts/run-linux.sh. FFmpeg/ffprobe are
           required for video. No root install or automatic system service.
@@ -498,11 +508,13 @@ jobs:
           only; do not expose the API publicly. Report problems in GitHub Issues.
           NOTES
           gh release create "$TAG" \
-            /tmp/lumqenix-release/lumqenix-community-v0.3.0-rc.4-source.zip \
-            /tmp/lumqenix-release/lumqenix-community-v0.3.0-rc.4-source.zip.sha256 \
+            /tmp/lumqenix-release/lumqenix-community-v0.3.0-rc.5-source.zip \
+            /tmp/lumqenix-release/lumqenix-community-v0.3.0-rc.5-source.zip.sha256 \
+            /tmp/lumqenix-release/lumqenix-community-v0.3.0-rc.5-linux-installer.run \
+            /tmp/lumqenix-release/lumqenix-community-v0.3.0-rc.5-linux-installer.run.sha256 \
             /tmp/lumqenix-release/release-evidence.json \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "Lumqenix Community v0.3.0-rc.4 — Linux beta preview" \
+            --title "Lumqenix Community v0.3.0-rc.5 — Linux beta preview" \
             --notes-file /tmp/lumqenix-rc-notes.md \
             --prerelease --latest=false
