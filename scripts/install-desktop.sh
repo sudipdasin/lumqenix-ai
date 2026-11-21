@@ -20,7 +20,7 @@ entry = (
     "[Desktop Entry]\nType=Application\nVersion=1.0\n"
     "Name=Lumqenix Community\nComment=Local image and video enhancement studio\n"
     "Categories=Graphics;Video;\nTerminal=true\n"
-    "Exec=" + quote("bash " + root + "/scripts/launch-desktop.sh") + "\n"
+    "Exec=" + "bash " + quote(root + "/scripts/launch-desktop.sh") + "\n"
     "Path=" + root.replace('\\', '\\\\') + "\n"
 )
 Path(sys.argv[2]).write_text(entry, encoding="utf-8")
