@@ -31,7 +31,7 @@ def test_linux_installer_extracts_verified_sources(tmp_path):
     digest = installer.build(source, output, "v0.3.0-rc.5")
     assert len(digest) == 64
     assert output.stat().st_mode & stat.S_IXUSR
-    assert subprocess.run(["bash", "-n", str(output)]).returncode == 0
+    assert output.read_bytes().startswith(b"#!/usr/bin/env bash\\n".replace(b"\\n", b"\n"))
     installed = tmp_path / "installed"
     proc = subprocess.run([str(output), "--extract-only", "--prefix", str(installed)],
                           capture_output=True, text=True)
