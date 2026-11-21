@@ -393,3 +393,46 @@ def test_video_oversized_encoded_file_skips_verification(monkeypatch):
     assert sum(args[0] == "ffprobe" for args in calls) == 1
     assert not any(args[0] == "ffmpeg" and "-frames:v" in args for args in calls)
     assert not main.PROCESSING_LOCK.locked()
+
+
+def test_video_missing_encoded_file_skips_verification_and_unlocks():
+    """A successful encoder exit without an MP4 must fail before probing output."""
+    from app.main import PROCESSING_LOCK
+    calls = []
+    def runner(args, **kwargs):
+        calls.append(args)
+        if args[0] == "ffprobe":
+            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+        # Simulate encoder reporting success without writing its destination.
+        return CompletedProcess(args, 0, b"", b"")
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 422
+    assert "no output" in response.json()["detail"]
+    assert sum(args[0] == "ffprobe" for args in calls) == 1
+    assert not any(args[0] == "ffmpeg" and "-frames:v" in args for args in calls)
+    assert not PROCESSING_LOCK.locked()
+
+
+def test_video_empty_encoded_file_skips_verification_and_unlocks():
+    """Zero-byte MP4 must fail before decoding, even when encoder exits zero."""
+    from app.main import PROCESSING_LOCK
+    calls = []
+    def runner(args, **kwargs):
+        calls.append(args)
+        if args[0] == "ffprobe":
+            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+        if args[0] == "ffmpeg" and "-y" in args:
+            Path(args[-1]).write_bytes(b"")
+        return CompletedProcess(args, 0, b"", b"")
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 422
+    assert "no output" in response.json()["detail"]
+    assert sum(args[0] == "ffprobe" for args in calls) == 1
+    assert not any(args[0] == "ffmpeg" and "-frames:v" in args for args in calls)
+    assert not PROCESSING_LOCK.locked()
