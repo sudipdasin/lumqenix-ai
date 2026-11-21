@@ -19,6 +19,8 @@ jobs:
         run: |
           bash -n scripts/install-linux.sh
           bash -n scripts/run-linux.sh
+          bash -n scripts/launch-desktop.sh
+          bash -n scripts/install-desktop.sh
           test -s LICENSE
           grep -q 'MIT License' LICENSE
       - uses: actions/setup-python@v5
@@ -32,6 +34,184 @@ jobs:
           .venv/bin/python -m pip uninstall -y opencv-python-headless
           .venv/bin/python -m pip install 'opencv-contrib-python-headless>=4.9,<5'
           .venv/bin/python -m pip check
+      - name: Verify per-user Linux desktop integration
+        run: |
+          export XDG_DATA_HOME="$RUNNER_TEMP/lumqenix-xdg"
+          bash scripts/install-desktop.sh
+          test -s "$XDG_DATA_HOME/applications/lumqenix-community.desktop"
+          grep -q '^Type=Application
+        run: |
+          cd backend
+          ../.venv/bin/python -m pytest -q tests --junitxml=preview-pytest.xml
+      - name: Validate backend dependencies and import
+        run: |
+          .venv/bin/python -m pip check
+          .venv/bin/python - <<'PY'
+          import sys
+          sys.path.insert(0, 'backend')
+          from app.version import VERSION
+          from app.main import app
+          assert VERSION == '0.3.0-rc.2'
+          assert app.title == 'Lumqenix API'
+          PY
+      - name: Smoke-test local API and UI startup
+        run: |
+          bash scripts/run-linux.sh > /tmp/lumqenix-preview.log 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true' EXIT
+          .venv/bin/python - <<'PY'
+          import time
+          import urllib.request
+          for attempt in range(40):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=2) as api:
+                      assert api.status == 200
+                  with urllib.request.urlopen('http://127.0.0.1:8080', timeout=2) as ui:
+                      assert ui.status == 200
+                  print('Local beta UI and API are responding')
+                  break
+              except Exception:
+                  time.sleep(0.5)
+          else:
+              raise SystemExit('Beta startup smoke test failed')
+          PY
+      - name: Test real image enhancement response
+        run: |
+          .venv/bin/python - <<'PY'
+          import io
+          from PIL import Image
+          import sys
+          sys.path.insert(0, 'backend')
+          from fastapi.testclient import TestClient
+          from app.main import app
+          image = Image.new('RGB', (16, 16), (120, 90, 70))
+          buf = io.BytesIO()
+          image.save(buf, format='PNG')
+          with TestClient(app) as client:
+              response = client.post('/api/enhance/image', data={'preset':'auto', 'scale':'2'}, files={'file':('test.png', buf.getvalue(), 'image/png')})
+          assert response.status_code == 200, response.text[:400]
+          with Image.open(io.BytesIO(response.content)) as output:
+              assert output.format == 'PNG'
+              assert output.size == (32, 32)
+          PY
+      - name: Verify installed application has no accidental public bind
+        run: |
+          ! grep -Eq -- '--host (0\\.0\\.0\\.0|::)' scripts/run-linux.sh
+          ! grep -Eq -- '--bind (0\\.0\\.0\\.0|::)' scripts/run-linux.sh
+      - name: Archive source preview for download
+        run: |
+          git archive --format=zip --output=/tmp/lumqenix-community-v0.3.0-rc.2-source.zip HEAD
+          test -s /tmp/lumqenix-community-v0.3.0-rc.2-source.zip
+      - name: Generate and verify source ZIP checksum
+        run: |
+          cd /tmp
+          sha256sum lumqenix-community-v0.3.0-rc.2-source.zip > lumqenix-community-v0.3.0-rc.2-source.zip.sha256
+          sha256sum -c lumqenix-community-v0.3.0-rc.2-source.zip.sha256
+          unzip -t lumqenix-community-v0.3.0-rc.2-source.zip
+      - name: Upload beta regression results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumqenix-beta-pytest-results
+          path: backend/preview-pytest.xml
+          if-no-files-found: warn
+      - name: Upload source preview ZIP (not a certified release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumqenix-community-v0.3.0-rc.2-linux-source
+          path: |
+            /tmp/lumqenix-community-v0.3.0-rc.2-source.zip
+            /tmp/lumqenix-community-v0.3.0-rc.2-source.zip.sha256
+          if-no-files-found: error
+ "$XDG_DATA_HOME/applications/lumqenix-community.desktop"
+          grep -q '^Terminal=true
+        run: |
+          cd backend
+          ../.venv/bin/python -m pytest -q tests --junitxml=preview-pytest.xml
+      - name: Validate backend dependencies and import
+        run: |
+          .venv/bin/python -m pip check
+          .venv/bin/python - <<'PY'
+          import sys
+          sys.path.insert(0, 'backend')
+          from app.version import VERSION
+          from app.main import app
+          assert VERSION == '0.3.0-rc.2'
+          assert app.title == 'Lumqenix API'
+          PY
+      - name: Smoke-test local API and UI startup
+        run: |
+          bash scripts/run-linux.sh > /tmp/lumqenix-preview.log 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true' EXIT
+          .venv/bin/python - <<'PY'
+          import time
+          import urllib.request
+          for attempt in range(40):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=2) as api:
+                      assert api.status == 200
+                  with urllib.request.urlopen('http://127.0.0.1:8080', timeout=2) as ui:
+                      assert ui.status == 200
+                  print('Local beta UI and API are responding')
+                  break
+              except Exception:
+                  time.sleep(0.5)
+          else:
+              raise SystemExit('Beta startup smoke test failed')
+          PY
+      - name: Test real image enhancement response
+        run: |
+          .venv/bin/python - <<'PY'
+          import io
+          from PIL import Image
+          import sys
+          sys.path.insert(0, 'backend')
+          from fastapi.testclient import TestClient
+          from app.main import app
+          image = Image.new('RGB', (16, 16), (120, 90, 70))
+          buf = io.BytesIO()
+          image.save(buf, format='PNG')
+          with TestClient(app) as client:
+              response = client.post('/api/enhance/image', data={'preset':'auto', 'scale':'2'}, files={'file':('test.png', buf.getvalue(), 'image/png')})
+          assert response.status_code == 200, response.text[:400]
+          with Image.open(io.BytesIO(response.content)) as output:
+              assert output.format == 'PNG'
+              assert output.size == (32, 32)
+          PY
+      - name: Verify installed application has no accidental public bind
+        run: |
+          ! grep -Eq -- '--host (0\\.0\\.0\\.0|::)' scripts/run-linux.sh
+          ! grep -Eq -- '--bind (0\\.0\\.0\\.0|::)' scripts/run-linux.sh
+      - name: Archive source preview for download
+        run: |
+          git archive --format=zip --output=/tmp/lumqenix-community-v0.3.0-rc.2-source.zip HEAD
+          test -s /tmp/lumqenix-community-v0.3.0-rc.2-source.zip
+      - name: Generate and verify source ZIP checksum
+        run: |
+          cd /tmp
+          sha256sum lumqenix-community-v0.3.0-rc.2-source.zip > lumqenix-community-v0.3.0-rc.2-source.zip.sha256
+          sha256sum -c lumqenix-community-v0.3.0-rc.2-source.zip.sha256
+          unzip -t lumqenix-community-v0.3.0-rc.2-source.zip
+      - name: Upload beta regression results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumqenix-beta-pytest-results
+          path: backend/preview-pytest.xml
+          if-no-files-found: warn
+      - name: Upload source preview ZIP (not a certified release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumqenix-community-v0.3.0-rc.2-linux-source
+          path: |
+            /tmp/lumqenix-community-v0.3.0-rc.2-source.zip
+            /tmp/lumqenix-community-v0.3.0-rc.2-source.zip.sha256
+          if-no-files-found: error
+ "$XDG_DATA_HOME/applications/lumqenix-community.desktop"
+          grep -q '^Exec=bash ' "$XDG_DATA_HOME/applications/lumqenix-community.desktop"
+          test -x .venv/bin/python
+          test -s scripts/launch-desktop.sh
       - name: Run backend regression suite
         run: |
           cd backend
