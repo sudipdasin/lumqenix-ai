@@ -125,3 +125,16 @@ Missing real weights are explicitly skipped in tests. CI runs Python 3.10/3.12 w
 ## Remaining release gates
 
 Physical 4 GB laptop validation, representative user-portrait A/B approval, and a compatible pretrained ONNX model evaluation remain open. Windows, GPU execution, long-duration video quality, hostile traffic, and multi-user deployment are unverified. The process lock does not bound multipart upload parsing or total host/browser memory. This application is intended for local single-user use; a public service needs a separate deployment and resource-isolation design. No final release is published.
+
+## Linux desktop menu integration (RC2 preview)
+
+Install the Community preview locally with `bash scripts/install-linux.sh`. Then
+run `bash scripts/install-desktop.sh` to add **Lumqenix Community** to your
+user's desktop application menu (XDG-compliant environments). No root or
+system-wide installation is required. The shortcut starts the local API and
+web interface through `scripts/launch-desktop.sh`; open
+`http://127.0.0.1:8080` in your browser. Close the launcher terminal to stop
+the services. The menu shortcut requires the extracted project directory to
+remain in its original location. To uninstall the shortcut, delete
+`${XDG_DATA_HOME:-$HOME/.local/share}/applications/lumqenix-community.desktop`.
+This is a source-based preview, not a standalone binary.
