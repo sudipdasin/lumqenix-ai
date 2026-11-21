@@ -55,3 +55,13 @@ def test_real_ffmpeg_video_roundtrip(tmp_path):
     # The one-second generated input must remain finite and bounded after processing.
     duration = float(json.loads(probe.stdout)["format"]["duration"])
     assert 0 < duration <= 1.5, f"Unexpected encoded output duration: {duration}"
+
+    # Decode actual compressed video, not merely container metadata. A truncated
+    # MP4 may be accepted by ffprobe yet fail to yield any usable video frames.
+    decoded = subprocess.run(
+        [ffmpeg, "-hide_banner", "-v", "error", "-xerror", "-nostdin",
+         "-i", str(output), "-map", "0:v:0", "-frames:v", "1",
+         "-f", "null", "-"],
+        capture_output=True, timeout=30,
+    )
+    assert decoded.returncode == 0, decoded.stderr.decode(errors="replace")
