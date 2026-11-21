@@ -47,3 +47,36 @@ def test_desktop_entry_generated_in_isolated_home(tmp_path):
         assert second.returncode == 0, second.stderr
         assert entry.read_text() == text
         assert entry.stat().st_mode & 0o777 == 0o644
+
+
+def test_desktop_uninstaller_is_safe_and_idempotent(tmp_path):
+    xdg = tmp_path / "xdg"
+    apps = xdg / "applications"
+    apps.mkdir(parents=True)
+    entry = apps / "lumqenix-community.desktop"
+    script = ROOT / "scripts/uninstall-desktop.sh"
+    env = {**os.environ, "XDG_DATA_HOME": str(xdg)}
+    entry.write_text("[Desktop Entry]\nName=Other Application\n")
+    blocked = subprocess.run(["bash", str(script)], env=env, capture_output=True, text=True)
+    assert blocked.returncode != 0
+    assert entry.exists()
+    entry.write_text("[Desktop Entry]\nName=Lumqenix Community\n")
+    removed = subprocess.run(["bash", str(script)], env=env, capture_output=True, text=True)
+    assert removed.returncode == 0, removed.stderr
+    assert not entry.exists()
+    repeated = subprocess.run(["bash", str(script)], env=env, capture_output=True, text=True)
+    assert repeated.returncode == 0
+
+
+def test_desktop_uninstaller_rejects_symlink(tmp_path):
+    xdg = tmp_path / "xdg"
+    apps = xdg / "applications"
+    apps.mkdir(parents=True)
+    target = tmp_path / "important"
+    target.write_text("keep")
+    (apps / "lumqenix-community.desktop").symlink_to(target)
+    result = subprocess.run(["bash", str(ROOT / "scripts/uninstall-desktop.sh")],
+                            env={**os.environ, "XDG_DATA_HOME": str(xdg)},
+                            capture_output=True, text=True)
+    assert result.returncode != 0
+    assert target.read_text() == "keep"
