@@ -263,8 +263,8 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
                 if verified.returncode != 0:
                     raise HTTPException(422, "Enhanced video container is invalid")
                 streams = json.loads(verified.stdout).get("streams", [])
-                if not streams or int(streams[0]["width"]) <= 0 or int(streams[0]["height"]) <= 0:
-                    raise HTTPException(422, "Enhanced video stream is invalid")
+                if not streams or int(streams[0]["width"]) != output_width or int(streams[0]["height"]) != output_height:
+                    raise HTTPException(422, "Enhanced video dimensions do not match the requested scale")
                 decoded = subprocess.run(
                     ["ffmpeg", "-nostdin", "-v", "error", "-i", str(dst),
                      "-map", "0:v:0", "-frames:v", "1", "-f", "null", "-"],
