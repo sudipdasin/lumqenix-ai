@@ -253,6 +253,30 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
                 raise HTTPException(422,"Video processing failed or timed out")
             except OSError as exc:
                 raise HTTPException(503, "Video processing tool could not start") from exc
+            # An encoder may exit successfully after writing an unreadable/truncated MP4.
+            # Validate the container and decode an actual frame before returning bytes.
+            try:
+                verified = subprocess.run(
+                    ["ffprobe", "-v", "error", "-select_streams", "v:0",
+                     "-show_entries", "stream=codec_type,width,height", "-of", "json", str(dst)],
+                    capture_output=True, text=True, timeout=20)
+                if verified.returncode != 0:
+                    raise HTTPException(422, "Enhanced video container is invalid")
+                streams = json.loads(verified.stdout).get("streams", [])
+                if not streams or int(streams[0]["width"]) <= 0 or int(streams[0]["height"]) <= 0:
+                    raise HTTPException(422, "Enhanced video stream is invalid")
+                decoded = subprocess.run(
+                    ["ffmpeg", "-nostdin", "-v", "error", "-i", str(dst),
+                     "-map", "0:v:0", "-frames:v", "1", "-f", "null", "-"],
+                    capture_output=True, timeout=30)
+                if decoded.returncode != 0:
+                    raise HTTPException(422, "Enhanced video frame cannot be decoded")
+            except (ValueError, TypeError, KeyError, IndexError, json.JSONDecodeError) as exc:
+                raise HTTPException(422, "Enhanced video metadata is invalid") from exc
+            except subprocess.TimeoutExpired as exc:
+                raise HTTPException(422, "Enhanced video verification timed out") from exc
+            except OSError as exc:
+                raise HTTPException(503, "Video verification tool could not start") from exc
             try:
                 output_size = dst.stat().st_size
                 if output_size == 0:
