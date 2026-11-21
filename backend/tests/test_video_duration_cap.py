@@ -30,4 +30,6 @@ def test_video_ffmpeg_command_caps_output_duration(monkeypatch):
     ffmpeg = next(cmd for cmd in commands if cmd[0] == "ffmpeg")
     assert "-t" in ffmpeg
     assert ffmpeg[ffmpeg.index("-t") + 1] == str(main.MAX_VIDEO_DURATION)
+    assert "-fs" in ffmpeg
+    assert ffmpeg[ffmpeg.index("-fs") + 1] == str(main.MAX_VIDEO_OUTPUT)
     assert not main.PROCESSING_LOCK.locked()
