@@ -248,7 +248,7 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
             filters = {"auto":"eq=contrast=1.05:saturation=1.08,unsharp=3:3:0.4", "natural":"unsharp=3:3:0.3", "vivid":"eq=contrast=1.1:saturation=1.3", "restore":"hqdn3d=2:1.5:3:2,unsharp=3:3:0.3", "cinematic":"eq=contrast=1.16:saturation=1.1", "portrait":"hqdn3d=1:1:2:2,eq=contrast=1.03:saturation=1.02"}
             vf = filters[preset] + f",scale=iw*{scale}:ih*{scale}:flags=lanczos,pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuv420p"
             try:
-                subprocess.run(["ffmpeg","-threads","2","-filter_threads","2","-nostdin","-v","error","-y","-i",str(src),"-map","0:v:0","-map","0:a:0?","-vf",vf,"-c:v","libx264","-threads","2","-preset","veryfast","-crf","19","-t",str(MAX_VIDEO_DURATION),"-c:a","aac","-movflags","+faststart",str(dst)],check=True,timeout=180,capture_output=True)
+                subprocess.run(["ffmpeg","-threads","2","-filter_threads","2","-nostdin","-v","error","-y","-i",str(src),"-map","0:v:0","-map","0:a:0?","-vf",vf,"-c:v","libx264","-threads","2","-preset","veryfast","-crf","19","-t",str(MAX_VIDEO_DURATION),"-fs",str(MAX_VIDEO_OUTPUT),"-c:a","aac","-movflags","+faststart",str(dst)],check=True,timeout=180,capture_output=True)
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
                 raise HTTPException(422,"Video processing failed or timed out")
             except OSError as exc:
