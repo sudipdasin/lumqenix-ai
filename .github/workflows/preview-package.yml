@@ -21,6 +21,7 @@ jobs:
           bash -n scripts/run-linux.sh
           bash -n scripts/launch-desktop.sh
           bash -n scripts/install-desktop.sh
+          bash -n scripts/uninstall-desktop.sh
           test -s LICENSE
           grep -q 'MIT License' LICENSE
       - uses: actions/setup-python@v5
