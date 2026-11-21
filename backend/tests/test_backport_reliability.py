@@ -348,3 +348,26 @@ def test_status_reports_video_tools_when_both_exist():
         response = client.get("/api/status")
     assert response.status_code == 200
     assert response.json()["ffmpeg_available"] is True
+
+def test_video_rejects_wrong_encoded_dimensions_and_releases_lock():
+    """An otherwise decodable output must not pass when scaling is incorrect."""
+    from app.main import PROCESSING_LOCK
+    calls = []
+    def runner(args, **kwargs):
+        calls.append(args)
+        if args[0] == "ffprobe":
+            # The source is 32x24 and scale=2 requires 64x48; deliberately
+            # report the source dimensions for the encoded output as well.
+            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+        if args[0] == "ffmpeg" and "-y" in args:
+            Path(args[-1]).write_bytes(b"mp4data")
+        return CompletedProcess(args, 0, b"", b"")
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 422
+    assert "dimensions do not match" in response.json()["detail"]
+    assert sum(args[0] == "ffprobe" for args in calls) == 2
+    assert not any(args[0] == "ffmpeg" and "-frames:v" in args for args in calls)
+    assert not PROCESSING_LOCK.locked()
