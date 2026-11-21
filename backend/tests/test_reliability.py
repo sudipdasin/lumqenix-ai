@@ -161,7 +161,7 @@ def test_video_lock_is_preserved_when_busy_and_released_on_failure(upload, monke
     monkeypatch.setattr(main.shutil, "which", lambda binary: "/usr/bin/" + binary)
     def run(command, **kwargs):
         if command[0] == "ffprobe":
-            return subprocess.CompletedProcess(command, 0, stdout=json.dumps({"streams": [{"width": 32, "height": 24, "duration": "1"}]}))
+            return subprocess.CompletedProcess(command, 0, stdout=json.dumps({"streams": [{"width": 64, "height": 48, "duration": "1"}] if Path(command[-1]).name == "enhanced.mp4" else [{"width": 32, "height": 24, "duration": "1"}]}))
         assert main.PROCESSING_LOCK.locked()
         raise subprocess.CalledProcessError(1, command)
     monkeypatch.setattr(main.subprocess, "run", run)
@@ -221,7 +221,7 @@ def test_video_output_cap_checked_before_read(upload, monkeypatch):
     monkeypatch.setattr(main, "MAX_VIDEO_OUTPUT", 3)
     def run(command, **kwargs):
         if command[0] == "ffprobe":
-            return subprocess.CompletedProcess(command, 0, stdout=json.dumps({"streams": [{"width": 32, "height": 24, "duration": "1"}]}))
+            return subprocess.CompletedProcess(command, 0, stdout=json.dumps({"streams": [{"width": 64, "height": 48, "duration": "1"}] if Path(command[-1]).name == "enhanced.mp4" else [{"width": 32, "height": 24, "duration": "1"}]}))
         Path(command[-1]).write_bytes(b"large output")
         return subprocess.CompletedProcess(command, 0)
     monkeypatch.setattr(main.subprocess, "run", run)

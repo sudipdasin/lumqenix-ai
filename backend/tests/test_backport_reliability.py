@@ -37,7 +37,7 @@ def test_ffprobe_launch_error_returns_503():
 def test_ffmpeg_launch_error_returns_503():
     def runner(args, **kwargs):
         if args[0] == "ffprobe":
-            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+            return CompletedProcess(args, 0, '{"streams":[{"width":64,"height":48}],"format":{"duration":"1"}}' if Path(args[-1]).name == "enhanced.mp4" else '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
         raise FileNotFoundError("ffmpeg")
     with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
         "app.main.subprocess.run", side_effect=runner
@@ -48,7 +48,7 @@ def test_ffmpeg_launch_error_returns_503():
 def test_missing_encoded_video_returns_422():
     def runner(args, **kwargs):
         if args[0] == "ffprobe":
-            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+            return CompletedProcess(args, 0, '{"streams":[{"width":64,"height":48}],"format":{"duration":"1"}}' if Path(args[-1]).name == "enhanced.mp4" else '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
         return CompletedProcess(args, 0, b"", b"")
     with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
         "app.main.subprocess.run", side_effect=runner
@@ -60,7 +60,7 @@ def test_video_output_cap_rejected_before_loading(monkeypatch):
     from app import main
     def runner(args, **kwargs):
         if args[0] == "ffprobe":
-            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+            return CompletedProcess(args, 0, '{"streams":[{"width":64,"height":48}],"format":{"duration":"1"}}' if Path(args[-1]).name == "enhanced.mp4" else '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
         Path(args[-1]).write_bytes(b"oversized")
         return CompletedProcess(args, 0, b"", b"")
     monkeypatch.setattr(main, "MAX_VIDEO_OUTPUT", 4)
@@ -74,7 +74,7 @@ def test_video_output_within_cap_returns_mp4(monkeypatch):
     from app import main
     def runner(args, **kwargs):
         if args[0] == "ffprobe":
-            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+            return CompletedProcess(args, 0, '{"streams":[{"width":64,"height":48}],"format":{"duration":"1"}}' if Path(args[-1]).name == "enhanced.mp4" else '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
         Path(args[-1]).write_bytes(b"mp4data")
         return CompletedProcess(args, 0, b"", b"")
     monkeypatch.setattr(main, "MAX_VIDEO_OUTPUT", 7)
@@ -97,7 +97,7 @@ def test_empty_video_upload_rejected_before_ffprobe():
 def test_encoded_video_read_failure_returns_503():
     def runner(args, **kwargs):
         if args[0] == "ffprobe":
-            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+            return CompletedProcess(args, 0, '{"streams":[{"width":64,"height":48}],"format":{"duration":"1"}}' if Path(args[-1]).name == "enhanced.mp4" else '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
         Path(args[-1]).write_bytes(b"mp4data")
         return CompletedProcess(args, 0, b"", b"")
     original_open = Path.open
@@ -116,7 +116,7 @@ def test_video_lock_released_after_encoder_failure():
     from app.main import PROCESSING_LOCK
     def runner(args, **kwargs):
         if args[0] == "ffprobe":
-            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+            return CompletedProcess(args, 0, '{"streams":[{"width":64,"height":48}],"format":{"duration":"1"}}' if Path(args[-1]).name == "enhanced.mp4" else '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
         raise FileNotFoundError("ffmpeg")
     with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
         "app.main.subprocess.run", side_effect=runner
@@ -128,7 +128,7 @@ def test_video_lock_released_after_encoder_failure():
 def test_video_missing_after_encoder_returns_422():
     def runner(args, **kwargs):
         if args[0] == "ffprobe":
-            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+            return CompletedProcess(args, 0, '{"streams":[{"width":64,"height":48}],"format":{"duration":"1"}}' if Path(args[-1]).name == "enhanced.mp4" else '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
         return CompletedProcess(args, 0, b"", b"")
     with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
         "app.main.subprocess.run", side_effect=runner
@@ -181,7 +181,7 @@ def test_video_output_cap_rechecked_after_read(monkeypatch):
     from app import main
     def runner(args, **kwargs):
         if args[0] == "ffprobe":
-            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+            return CompletedProcess(args, 0, '{"streams":[{"width":64,"height":48}],"format":{"duration":"1"}}' if Path(args[-1]).name == "enhanced.mp4" else '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
         Path(args[-1]).write_bytes(b"ok")
         return CompletedProcess(args, 0, b"", b"")
     original_open = Path.open
@@ -199,7 +199,7 @@ def test_video_output_cap_rechecked_after_read(monkeypatch):
 def test_video_output_empty_after_stat_returns_422():
     def runner(args, **kwargs):
         if args[0] == "ffprobe":
-            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+            return CompletedProcess(args, 0, '{"streams":[{"width":64,"height":48}],"format":{"duration":"1"}}' if Path(args[-1]).name == "enhanced.mp4" else '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
         Path(args[-1]).write_bytes(b"mp4")
         return CompletedProcess(args, 0, b"", b"")
     original_open = Path.open
@@ -303,7 +303,7 @@ def test_video_output_read_is_bounded_after_stat(monkeypatch):
     from app import main
     def runner(args, **kwargs):
         if args[0] == "ffprobe":
-            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+            return CompletedProcess(args, 0, '{"streams":[{"width":64,"height":48}],"format":{"duration":"1"}}' if Path(args[-1]).name == "enhanced.mp4" else '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
         Path(args[-1]).write_bytes(b"ok")
         return CompletedProcess(args, 0, b"", b"")
     class RecordingStream(io.BytesIO):
@@ -348,3 +348,26 @@ def test_status_reports_video_tools_when_both_exist():
         response = client.get("/api/status")
     assert response.status_code == 200
     assert response.json()["ffmpeg_available"] is True
+
+def test_video_rejects_wrong_encoded_dimensions_and_releases_lock():
+    """An otherwise decodable output must not pass when scaling is incorrect."""
+    from app.main import PROCESSING_LOCK
+    calls = []
+    def runner(args, **kwargs):
+        calls.append(args)
+        if args[0] == "ffprobe":
+            # The source is 32x24 and scale=2 requires 64x48; deliberately
+            # report the source dimensions for the encoded output as well.
+            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+        if args[0] == "ffmpeg" and "-y" in args:
+            Path(args[-1]).write_bytes(b"mp4data")
+        return CompletedProcess(args, 0, b"", b"")
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 422
+    assert "dimensions do not match" in response.json()["detail"]
+    assert sum(args[0] == "ffprobe" for args in calls) == 2
+    assert not any(args[0] == "ffmpeg" and "-frames:v" in args for args in calls)
+    assert not PROCESSING_LOCK.locked()
