@@ -1,13 +1,13 @@
 # Lumqenix AI — Studio Lite
 
-Local image and video enhancement for CPU use. Preview candidate build: **0.3.0-rc.4 (beta preview)**. This is an **experimental prerelease candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
+Local image and video enhancement for CPU use. Preview candidate build: **0.3.0-rc.5 (beta preview)**. This is an **experimental prerelease candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
 
 ## Linux beta preview — install and feedback
 
-**Release channel:** `preview/v0.3.0-rc.4-beta`. This is a source-installable beta, **not a verified production binary**. On Linux with Python 3.10+:
+**Release channel:** `preview/v0.3.0-rc.5-beta`. This is a source-installable beta, **not a verified production binary**. On Linux with Python 3.10+:
 
 ```bash
-git clone --branch preview/v0.3.0-rc.4-beta https://github.com/sudipdasin/lumqenix-ai.git
+git clone --branch preview/v0.3.0-rc.5-beta https://github.com/sudipdasin/lumqenix-ai.git
 cd lumqenix-ai
 bash scripts/install-linux.sh
 bash scripts/run-linux.sh
@@ -15,7 +15,22 @@ bash scripts/run-linux.sh
 
 Open http://127.0.0.1:8080. The installer uses a local `.venv` without root permissions. FFmpeg and ffprobe must be installed separately for video processing. Stop with Ctrl+C. To remove the local installation, delete the cloned directory; no system service is installed. No pretrained weights are included by default.
 
-**Artifact verification:** Successful GitHub Actions preview runs produce a source ZIP and a matching `.sha256` checksum file. In the download directory, run `sha256sum -c lumqenix-community-v0.3.0-rc.4-source.zip.sha256` before extracting the CI artifact. The GitHub branch ZIP linked above is a separate automatically generated archive and is **not** covered by that CI checksum. Do not treat an artifact as validated until the workflow run has passed.
+**New RC5 Linux installer:** The release pipeline builds a downloadable
+`lumqenix-community-v0.3.0-rc.5-linux-installer.run` containing the verified
+Community source. On Linux with Python 3.10+, run
+`bash lumqenix-community-v0.3.0-rc.5-linux-installer.run`. This checks the
+embedded source SHA-256, extracts safely to
+`~/.local/share/lumqenix-community/v0.3.0-rc.5`, installs a local virtual
+environment, and creates an optional per-user desktop entry. A network
+connection is normally required to install Python dependencies; FFmpeg must
+be installed separately for video. The installer is **not a compiled offline
+binary**. Use `--no-desktop` for headless installation or
+`--extract-only --prefix /your/directory` to extract without installing
+dependencies. Existing versioned installations are never overwritten.
+Uninstall the menu shortcut with
+`bash ~/.local/share/lumqenix-community/v0.3.0-rc.5/scripts/uninstall-desktop.sh`.
+
+**Artifact verification:** Successful GitHub Actions preview runs produce a source ZIP and a matching `.sha256` checksum file. In the download directory, run `sha256sum -c lumqenix-community-v0.3.0-rc.5-source.zip.sha256` before extracting the CI artifact. The GitHub branch ZIP linked above is a separate automatically generated archive and is **not** covered by that CI checksum. Do not treat an artifact as validated until the workflow run has passed.
 
 **Distribution note:** the Community repository is public, and tagged beta releases provide verified source ZIP assets once the exact-commit CI and packaging gates pass. This branch is an RC3 candidate, not a native installer or stable release. Do not expose the local API to the public internet.
 
