@@ -253,6 +253,18 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
                 raise HTTPException(422,"Video processing failed or timed out")
             except OSError as exc:
                 raise HTTPException(503, "Video processing tool could not start") from exc
+            # Reject invalid output before launching more media subprocesses.
+            # The encoder's -fs cap does not guarantee a bounded final file.
+            try:
+                encoded_size = dst.stat().st_size
+                if encoded_size == 0:
+                    raise HTTPException(422, "Video processing produced no output")
+                if encoded_size > MAX_VIDEO_OUTPUT:
+                    raise HTTPException(413, "Video output exceeds 100 MB")
+            except FileNotFoundError as exc:
+                raise HTTPException(422, "Video processing produced no output") from exc
+            except OSError as exc:
+                raise HTTPException(503, "Enhanced video could not be read") from exc
             # An encoder may exit successfully after writing an unreadable/truncated MP4.
             # Validate the container and decode an actual frame before returning bytes.
             try:
