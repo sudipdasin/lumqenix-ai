@@ -325,7 +325,7 @@ jobs:
 
   history-audit:
     name: Full reachable-history publication screen
-    if: github.event_name == 'push' && github.ref == 'refs/heads/preview/v0.3.0-rc.2-beta'
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_prerelease == true && github.ref == 'refs/heads/preview/v0.3.0-rc.2-beta'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -351,7 +351,7 @@ jobs:
 
   publish-verified-prerelease:
     name: Publish verified Linux source prerelease (never stable)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/preview/v0.3.0-rc.2-beta'
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_prerelease == true && github.ref == 'refs/heads/preview/v0.3.0-rc.2-beta'
     needs: [test, frontend, video-integration, cpu-benchmark, release-evidence, history-audit]
     runs-on: ubuntu-latest
     timeout-minutes: 12
