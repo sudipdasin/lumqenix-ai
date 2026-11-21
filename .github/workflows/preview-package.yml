@@ -39,7 +39,10 @@ jobs:
           export XDG_DATA_HOME="$RUNNER_TEMP/lumqenix-xdg"
           bash scripts/install-desktop.sh
           test -s "$XDG_DATA_HOME/applications/lumqenix-community.desktop"
-          grep -q '^Type=Application
+          grep -q '^Type=Application$' "$XDG_DATA_HOME/applications/lumqenix-community.desktop"
+          grep -q '^Terminal=true$' "$XDG_DATA_HOME/applications/lumqenix-community.desktop"
+          grep -q '^Exec=bash ' "$XDG_DATA_HOME/applications/lumqenix-community.desktop"
+      - name: Run backend regression suite
         run: |
           cd backend
           ../.venv/bin/python -m pytest -q tests --junitxml=preview-pytest.xml
