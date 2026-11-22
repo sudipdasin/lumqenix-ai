@@ -23,7 +23,7 @@ def source_zip(tmp_path):
             data = (
                 'VERSION = "0.3.0-rc.6"\n'
                 if name == "backend/app/version.py" else
-                'VERSION="__LUMQENIX_VERSION__"\n#!/usr/bin/env bash\n'
+                '#!/usr/bin/env bash\nVERSION="__LUMQENIX_VERSION__"\nif [[ "${1:-}" == "--version" ]]; then echo "Lumqenix Community $VERSION"; fi\n'
                 if name == "scripts/run-deb.sh" else
                 "# synthetic test fixture\n"
             )
