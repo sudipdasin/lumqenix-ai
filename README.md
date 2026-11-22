@@ -1,13 +1,37 @@
 # Lumqenix AI — Studio Lite
 
-Local image and video enhancement for CPU use. Preview candidate build: **0.3.0-rc.5 (beta preview)**. This is an **experimental prerelease candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
+Local image and video enhancement for CPU use. Preview candidate build: **0.3.0-rc.6 (beta preview)**. This is an **experimental prerelease candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
+
+## Ubuntu / Debian package (RC6)
+
+The release includes a native `lumqenix-community_0.3.0~rc6-1_all.deb` package
+on the [GitHub Releases page](https://github.com/sudipdasin/lumqenix-ai/releases/tag/v0.3.0-rc.6).
+On Ubuntu 22.04+, Debian 12+, or another compatible distribution, download
+the `.deb` and its matching `.sha256`, then run:
+
+```bash
+sha256sum -c lumqenix-community_0.3.0~rc6-1_all.deb.sha256
+sudo apt install ./lumqenix-community_0.3.0~rc6-1_all.deb
+lumqenix-community
+```
+
+You can also open **Lumqenix Community** from the desktop application menu.
+The package installs a system launcher and application sources in
+`/opt/lumqenix-community`. On first launch, Python dependencies are installed
+**as your own user** into a version-specific XDG data directory. Network
+access may be required. No installation hook runs pip with root privileges.
+The package requires Python 3.10+, `python3-venv`, `python3-pip`, FFmpeg, and
+`flock` (util-linux). For diagnostics run `lumqenix-community --doctor`.
+Remove the package with `sudo apt remove lumqenix-community`; the per-user
+Python environment is retained for deliberate cleanup. This is not a fully
+offline standalone executable.
 
 ## Linux beta preview — install and feedback
 
-**Release channel:** `preview/v0.3.0-rc.5-beta`. This is a source-installable beta, **not a verified production binary**. On Linux with Python 3.10+:
+**Release channel:** `preview/v0.3.0-rc.6-beta`. This is a source-installable beta, **not a verified production binary**. On Linux with Python 3.10+:
 
 ```bash
-git clone --branch preview/v0.3.0-rc.5-beta https://github.com/sudipdasin/lumqenix-ai.git
+git clone --branch preview/v0.3.0-rc.6-beta https://github.com/sudipdasin/lumqenix-ai.git
 cd lumqenix-ai
 bash scripts/install-linux.sh
 bash scripts/run-linux.sh
@@ -15,12 +39,12 @@ bash scripts/run-linux.sh
 
 Open http://127.0.0.1:8080. The installer uses a local `.venv` without root permissions. FFmpeg and ffprobe must be installed separately for video processing. Stop with Ctrl+C. To remove the local installation, delete the cloned directory; no system service is installed. No pretrained weights are included by default.
 
-**New RC5 Linux installer:** The release pipeline builds a downloadable
-`lumqenix-community-v0.3.0-rc.5-linux-installer.run` containing the verified
+**RC6 Linux installer:** The release pipeline builds a downloadable
+`lumqenix-community-v0.3.0-rc.6-linux-installer.run` containing the verified
 Community source. On Linux with Python 3.10+, run
-`bash lumqenix-community-v0.3.0-rc.5-linux-installer.run`. This checks the
+`bash lumqenix-community-v0.3.0-rc.6-linux-installer.run`. This checks the
 embedded source SHA-256, extracts safely to
-`~/.local/share/lumqenix-community/v0.3.0-rc.5`, installs a local virtual
+`~/.local/share/lumqenix-community/v0.3.0-rc.6`, installs a local virtual
 environment, and creates an optional per-user desktop entry. A network
 connection is normally required to install Python dependencies; FFmpeg must
 be installed separately for video. The installer is **not a compiled offline
@@ -28,9 +52,9 @@ binary**. Use `--no-desktop` for headless installation or
 `--extract-only --prefix /your/directory` to extract without installing
 dependencies. Existing versioned installations are never overwritten.
 Uninstall the menu shortcut with
-`bash ~/.local/share/lumqenix-community/v0.3.0-rc.5/scripts/uninstall-desktop.sh`.
+`bash ~/.local/share/lumqenix-community/v0.3.0-rc.6/scripts/uninstall-desktop.sh`.
 
-**Artifact verification:** Successful GitHub Actions preview runs produce a source ZIP and a matching `.sha256` checksum file. In the download directory, run `sha256sum -c lumqenix-community-v0.3.0-rc.5-source.zip.sha256` before extracting the CI artifact. The GitHub branch ZIP linked above is a separate automatically generated archive and is **not** covered by that CI checksum. Do not treat an artifact as validated until the workflow run has passed.
+**Artifact verification:** Successful GitHub Actions preview runs produce a source ZIP and a matching `.sha256` checksum file. In the download directory, run `sha256sum -c lumqenix-community-v0.3.0-rc.6-source.zip.sha256` before extracting the CI artifact. The GitHub branch ZIP linked above is a separate automatically generated archive and is **not** covered by that CI checksum. Do not treat an artifact as validated until the workflow run has passed.
 
 **Distribution note:** the Community repository is public, and tagged beta releases provide verified source ZIP assets once the exact-commit CI and packaging gates pass. This branch is an RC3 candidate, not a native installer or stable release. Do not expose the local API to the public internet.
 
