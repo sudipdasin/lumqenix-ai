@@ -19,8 +19,9 @@ def guarded_blend(low_res_bgr, neural_bgr, strength=35):
     if (not isinstance(low_res_bgr, np.ndarray) or not isinstance(neural_bgr, np.ndarray)
             or low_res_bgr.dtype != np.uint8 or neural_bgr.dtype != np.uint8
             or low_res_bgr.ndim != 3 or low_res_bgr.shape[2] != 3
+            or low_res_bgr.shape[0] == 0 or low_res_bgr.shape[1] == 0
             or neural_bgr.shape != (low_res_bgr.shape[0] * 2, low_res_bgr.shape[1] * 2, 3)):
-        raise ValueError("Guard requires uint8 BGR input and an exact 2x BGR prediction")
+        raise ValueError("Guard requires nonempty uint8 BGR input and an exact 2x BGR prediction")
     height, width = low_res_bgr.shape[:2]
     bicubic = cv2.resize(low_res_bgr, (width * 2, height * 2), interpolation=cv2.INTER_CUBIC)
     original = low_res_bgr.astype(np.int16)
