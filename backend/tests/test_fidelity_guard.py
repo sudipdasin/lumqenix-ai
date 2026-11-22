@@ -71,3 +71,25 @@ def test_empty_images_raise_value_error(shape):
     high = np.zeros((shape[0] * 2, shape[1] * 2, 3), dtype=np.uint8)
     with pytest.raises(ValueError, match="nonempty"):
         guarded_blend(low, high)
+
+
+def test_guard_rejects_large_output_before_resizing(monkeypatch):
+    # Broadcast views model oversized dimensions without allocating large buffers.
+    low = np.broadcast_to(np.zeros((1, 1, 3), dtype=np.uint8), (2000, 2000, 3))
+    high = np.broadcast_to(np.zeros((1, 1, 3), dtype=np.uint8), (4000, 4000, 3))
+
+    def unexpected_resize(*args, **kwargs):
+        raise AssertionError("Oversized guard must fail before OpenCV allocation")
+
+    monkeypatch.setattr(cv2, "resize", unexpected_resize)
+    with pytest.raises(ValueError, match="workload limit"):
+        guarded_blend(low, high)
+
+
+def test_guard_allows_small_input_at_zero_strength():
+    low = np.full((8, 8, 3), 127, dtype=np.uint8)
+    high = np.full((16, 16, 3), 127, dtype=np.uint8)
+    output, weight, score = guarded_blend(low, high, strength=0)
+    assert output.shape == high.shape
+    assert weight == 0.0
+    assert score >= 0
