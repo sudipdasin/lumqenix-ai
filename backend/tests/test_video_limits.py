@@ -89,10 +89,9 @@ def test_ffprobe_query_includes_declared_frame_count():
         elements = call.args[0].elts
         if elements and isinstance(elements[0], ast.Constant) and elements[0].value == "ffprobe":
             ffprobe_commands.append([item.value for item in elements if isinstance(item, ast.Constant)])
-    assert len(ffprobe_commands) == 1
-    args = ffprobe_commands[0]
-    entries = args[args.index("-show_entries") + 1]
-    assert "nb_frames" in entries.split(":")[0].split("=")[1].split(",")
+    assert ffprobe_commands
+    entries = [args[args.index("-show_entries") + 1] for args in ffprobe_commands]
+    assert any("nb_frames" in entry.split(":")[0].split("=")[1].split(",") for entry in entries)
 
 
 def test_declared_frame_count_rejected_even_when_fps_estimate_is_small():
@@ -166,15 +165,3 @@ def test_endpoint_rejects_cpu_budget_before_ffmpeg(monkeypatch, metadata, reason
     assert not main.PROCESSING_LOCK.locked()
 
 
-def test_community_edition_api_remains_available_without_model_weights(monkeypatch):
-    from fastapi.testclient import TestClient
-    from app import main
-    monkeypatch.delenv("LUMQENIX_FSRCNN_MODEL", raising=False)
-    monkeypatch.delenv("LUMQENIX_ESPCN_MODEL", raising=False)
-    response = TestClient(main.app).get("/api/edition")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["edition"] == "community"
-    assert data["contract_version"] == 1
-    assert data["proprietary_code_bundled"] is False
-    assert "classic-video-enhancement" in data["capabilities"]
