@@ -104,7 +104,7 @@ def build(source_zip, output, version):
             "TryExec=lumqenix-community\n"
             "Icon=applications-graphics\n"
             "Terminal=true\n"
-            "Categories=Graphics;Video;\n"
+            "Categories=Graphics;AudioVideo;\n"
             "StartupNotify=false\n",
             encoding="utf-8",
         )
