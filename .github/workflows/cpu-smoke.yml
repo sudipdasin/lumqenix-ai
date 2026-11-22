@@ -511,6 +511,8 @@ jobs:
             /tmp/lumqenix-release/lumqenix-community-v0.3.0-rc.6-source.zip.sha256 \
             /tmp/lumqenix-release/lumqenix-community-v0.3.0-rc.6-linux-installer.run \
             /tmp/lumqenix-release/lumqenix-community-v0.3.0-rc.6-linux-installer.run.sha256 \
+            /tmp/lumqenix-release/lumqenix-community_0.3.0~rc6-1_all.deb \
+            /tmp/lumqenix-release/lumqenix-community_0.3.0~rc6-1_all.deb.sha256 \
             /tmp/lumqenix-release/release-evidence.json \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
