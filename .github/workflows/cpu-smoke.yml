@@ -442,6 +442,11 @@ jobs:
           cd /tmp/lumqenix-release
           sha256sum -c lumqenix-community-v0.3.0-rc.6-source.zip.sha256
           sha256sum -c lumqenix-community-v0.3.0-rc.6-linux-installer.run.sha256
+          sha256sum -c lumqenix-community_0.3.0~rc6-1_all.deb.sha256
+          dpkg-deb --info lumqenix-community_0.3.0~rc6-1_all.deb
+          dpkg-deb --extract lumqenix-community_0.3.0~rc6-1_all.deb /tmp/lumqenix-deb-release-check
+          test -s /tmp/lumqenix-deb-release-check/usr/bin/lumqenix-community
+          bash /tmp/lumqenix-deb-release-check/usr/bin/lumqenix-community --version | grep -F 'v0.3.0-rc.6'
           ./lumqenix-community-v0.3.0-rc.6-linux-installer.run \
             --extract-only --prefix /tmp/lumqenix-release-installer-check
           test -s /tmp/lumqenix-release-installer-check/v0.3.0-rc.6/scripts/run-linux.sh
