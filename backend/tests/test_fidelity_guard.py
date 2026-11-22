@@ -63,3 +63,11 @@ def test_invalid_low_resolution_rejected():
     with pytest.raises(ValueError):
         guarded_blend(np.zeros((41, 57), dtype=np.uint8),
                       np.zeros((82, 114, 3), dtype=np.uint8))
+
+
+@pytest.mark.parametrize("shape", [(0, 8, 3), (8, 0, 3), (0, 0, 3)])
+def test_empty_images_raise_value_error(shape):
+    low = np.zeros(shape, dtype=np.uint8)
+    high = np.zeros((shape[0] * 2, shape[1] * 2, 3), dtype=np.uint8)
+    with pytest.raises(ValueError, match="nonempty"):
+        guarded_blend(low, high)
