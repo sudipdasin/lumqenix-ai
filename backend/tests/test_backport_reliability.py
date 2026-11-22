@@ -482,3 +482,29 @@ def test_video_encoded_first_frame_decode_failure_returns_422():
     assert "cannot be decoded" in response.json()["detail"]
     assert any("-frames:v" in args for args in calls)
     assert not PROCESSING_LOCK.locked()
+
+
+def test_video_verification_enables_strict_decoder_error_handling():
+    """A zero-exit decoder must not silently conceal recoverable frame errors."""
+    from app.main import PROCESSING_LOCK
+    calls = []
+    def runner(args, **kwargs):
+        calls.append(args)
+        if args[0] == "ffprobe":
+            dims = (64, 48) if Path(args[-1]).name == "enhanced.mp4" else (32, 24)
+            return CompletedProcess(args, 0, '{"streams":[{"width":%d,"height":%d}],"format":{"duration":"1"}}' % dims, "")
+        if "-y" in args:
+            Path(args[-1]).write_bytes(b"encoded")
+        return CompletedProcess(args, 0, b"", b"")
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 200
+    decodes = [args for args in calls if args[0] == "ffmpeg" and "-frames:v" in args]
+    assert len(decodes) == 1
+    args = decodes[0]
+    assert "-xerror" in args
+    assert args.index("-err_detect") < args.index("-i")
+    assert args[args.index("-err_detect") + 1] == "explode"
+    assert not PROCESSING_LOCK.locked()
