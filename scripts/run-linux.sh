@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PY="$ROOT/.venv/bin/python"
+PY="${LUMQENIX_PYTHON:-$ROOT/.venv/bin/python}"
 [[ -x "$PY" ]] || { echo "Run bash scripts/install-linux.sh first" >&2; exit 1; }
 # Refuse to kill or bind unrelated services; never expose API on a public interface.
 "$PY" - "$ROOT" <<'PY'
