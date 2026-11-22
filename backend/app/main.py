@@ -279,7 +279,7 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
                     raise HTTPException(422, "Enhanced video dimensions do not match the requested scale")
                 decoded = subprocess.run(
                     ["ffmpeg", "-nostdin", "-v", "error", "-i", str(dst),
-                     "-map", "0:v:0", "-frames:v", "1", "-f", "null", "-"],
+                     "-xerror", "-err_detect", "explode", "-map", "0:v:0", "-frames:v", "1", "-f", "null", "-"],
                     capture_output=True, timeout=30)
                 if decoded.returncode != 0:
                     raise HTTPException(422, "Enhanced video frame cannot be decoded")
