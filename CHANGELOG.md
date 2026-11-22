@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.0-rc.6 — Native Ubuntu/Debian package preview (2026-11-23)
+- Build and attach `lumqenix-community_0.3.0~rc6-1_all.deb` and its SHA-256 checksum directly on the prerelease after the existing real-model, CPU, video, evidence, source-boundary, and packaging gates pass.
+- Add a desktop menu entry and `lumqenix-community` command. System package installation and removal use dpkg-owned files, with no network-capable root maintainer scripts.
+- Install Python dependencies into a user's own XDG data directory at first launch, keeping the system package architecture-independent; video requires system FFmpeg. **An internet connection may be required on first launch.**
+- Add package archive path/type checks, version matching, dpkg metadata checks, install/remove smoke tests and offline regression cases.
+- Keep Community/Pro separation; RC6 is a beta, not a stable or fully offline standalone binary.
+
+
 ## v0.3.0-rc.5 — Linux installer and CI delivery candidate (2026-11-22)
 - Build a SHA-256 verified, self-extracting Linux `.run` installer from the exact source ZIP and publish both as GitHub Releases assets only after same-commit CI gates pass.
 - Install into versioned per-user directories, refuse overwrites, validate archive paths/symlinks/duplicates and enforce an expansion cap; optional XDG desktop-menu integration with safe removal.
