@@ -436,3 +436,49 @@ def test_video_empty_encoded_file_skips_verification_and_unlocks():
     assert sum(args[0] == "ffprobe" for args in calls) == 1
     assert not any(args[0] == "ffmpeg" and "-frames:v" in args for args in calls)
     assert not PROCESSING_LOCK.locked()
+
+
+def test_video_corrupt_encoded_metadata_rejected_before_decode():
+    """Malformed output ffprobe JSON must return 422 and release the lock."""
+    from app.main import PROCESSING_LOCK
+    calls = []
+    def runner(args, **kwargs):
+        calls.append(args)
+        if args[0] == "ffprobe":
+            if Path(args[-1]).name == "enhanced.mp4":
+                return CompletedProcess(args, 0, "{not-json", "")
+            return CompletedProcess(args, 0, '{"streams":[{"width":32,"height":24}],"format":{"duration":"1"}}', "")
+        if "-y" in args:
+            Path(args[-1]).write_bytes(b"encoded")
+        return CompletedProcess(args, 0, b"", b"")
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 422
+    assert not any("-frames:v" in args for args in calls)
+    assert not PROCESSING_LOCK.locked()
+
+
+def test_video_encoded_first_frame_decode_failure_returns_422():
+    """Valid output dimensions are insufficient when decoding fails."""
+    from app.main import PROCESSING_LOCK
+    calls = []
+    def runner(args, **kwargs):
+        calls.append(args)
+        if args[0] == "ffprobe":
+            dims = (64, 48) if Path(args[-1]).name == "enhanced.mp4" else (32, 24)
+            return CompletedProcess(args, 0, '{"streams":[{"width":%d,"height":%d}],"format":{"duration":"1"}}' % dims, "")
+        if "-y" in args:
+            Path(args[-1]).write_bytes(b"encoded")
+        if "-frames:v" in args:
+            return CompletedProcess(args, 1, b"", b"corrupt frame")
+        return CompletedProcess(args, 0, b"", b"")
+    with patch("app.main.shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+        "app.main.subprocess.run", side_effect=runner
+    ):
+        response = client.post("/api/enhance/video", files={"file": ("video.mp4", b"video", "video/mp4")})
+    assert response.status_code == 422
+    assert "cannot be decoded" in response.json()["detail"]
+    assert any("-frames:v" in args for args in calls)
+    assert not PROCESSING_LOCK.locked()
