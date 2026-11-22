@@ -22,7 +22,8 @@ jobs:
           bash -n scripts/launch-desktop.sh
           bash -n scripts/install-desktop.sh
           bash -n scripts/uninstall-desktop.sh
-          python3 -m py_compile scripts/build-linux-installer.py
+          python3 -m py_compile scripts/build-linux-installer.py scripts/build-deb.py
+          bash -n scripts/run-deb.sh
           test -s LICENSE
           grep -q 'MIT License' LICENSE
       - uses: actions/setup-python@v5
@@ -48,7 +49,7 @@ jobs:
           sys.path.insert(0, 'backend')
           from app.version import VERSION
           from app.main import app
-          assert VERSION == '0.3.0-rc.5'
+          assert VERSION == '0.3.0-rc.6'
           assert app.title == 'Lumqenix API'
           PY
       - name: Smoke-test local API and UI startup
@@ -97,31 +98,53 @@ jobs:
           ! grep -Eq -- '--bind (0\\.0\\.0\\.0|::)' scripts/run-linux.sh
       - name: Archive source preview for download
         run: |
-          git archive --format=zip --output=/tmp/lumqenix-community-v0.3.0-rc.5-source.zip HEAD
-          test -s /tmp/lumqenix-community-v0.3.0-rc.5-source.zip
+          git archive --format=zip --output=/tmp/lumqenix-community-v0.3.0-rc.6-source.zip HEAD
+          test -s /tmp/lumqenix-community-v0.3.0-rc.6-source.zip
       - name: Build and smoke-test verified Linux .run installer
         run: |
           python3 scripts/build-linux-installer.py \
-            --source-zip /tmp/lumqenix-community-v0.3.0-rc.5-source.zip \
-            --output /tmp/lumqenix-community-v0.3.0-rc.5-linux-installer.run \
-            --version v0.3.0-rc.5
-          /tmp/lumqenix-community-v0.3.0-rc.5-linux-installer.run \
+            --source-zip /tmp/lumqenix-community-v0.3.0-rc.6-source.zip \
+            --output /tmp/lumqenix-community-v0.3.0-rc.6-linux-installer.run \
+            --version v0.3.0-rc.6
+          /tmp/lumqenix-community-v0.3.0-rc.6-linux-installer.run \
             --extract-only --prefix "$RUNNER_TEMP/lumqenix-rc5-installer-check"
-          test -s "$RUNNER_TEMP/lumqenix-rc5-installer-check/v0.3.0-rc.5/LICENSE"
-          test -s "$RUNNER_TEMP/lumqenix-rc5-installer-check/v0.3.0-rc.5/scripts/run-linux.sh"
-          if /tmp/lumqenix-community-v0.3.0-rc.5-linux-installer.run \
+          test -s "$RUNNER_TEMP/lumqenix-rc5-installer-check/v0.3.0-rc.6/LICENSE"
+          test -s "$RUNNER_TEMP/lumqenix-rc5-installer-check/v0.3.0-rc.6/scripts/run-linux.sh"
+          if /tmp/lumqenix-community-v0.3.0-rc.6-linux-installer.run \
             --extract-only --prefix "$RUNNER_TEMP/lumqenix-rc5-installer-check"; then
             echo "::error::Installer unexpectedly overwrote existing version"
             exit 1
           fi
-          (cd /tmp && sha256sum lumqenix-community-v0.3.0-rc.5-linux-installer.run > lumqenix-community-v0.3.0-rc.5-linux-installer.run.sha256)
-          (cd /tmp && sha256sum -c lumqenix-community-v0.3.0-rc.5-linux-installer.run.sha256)
+          (cd /tmp && sha256sum lumqenix-community-v0.3.0-rc.6-linux-installer.run > lumqenix-community-v0.3.0-rc.6-linux-installer.run.sha256)
+          (cd /tmp && sha256sum -c lumqenix-community-v0.3.0-rc.6-linux-installer.run.sha256)
+      - name: Build and install-test Ubuntu/Debian package
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y python3-venv python3-pip ffmpeg desktop-file-utils
+          python3 scripts/build-deb.py \
+            --source-zip /tmp/lumqenix-community-v0.3.0-rc.6-source.zip \
+            --output /tmp/lumqenix-community_0.3.0~rc6-1_all.deb \
+            --version v0.3.0-rc.6
+          dpkg-deb --info /tmp/lumqenix-community_0.3.0~rc6-1_all.deb
+          dpkg-deb --contents /tmp/lumqenix-community_0.3.0~rc6-1_all.deb
+          dpkg-deb --extract /tmp/lumqenix-community_0.3.0~rc6-1_all.deb "$RUNNER_TEMP/lumqenix-deb-extracted"
+          desktop-file-validate "$RUNNER_TEMP/lumqenix-deb-extracted/usr/share/applications/lumqenix-community.desktop"
+          bash -n "$RUNNER_TEMP/lumqenix-deb-extracted/usr/bin/lumqenix-community"
+          sudo dpkg -i /tmp/lumqenix-community_0.3.0~rc6-1_all.deb
+          dpkg -s lumqenix-community
+          command -v lumqenix-community
+          lumqenix-community --version | grep -F 'v0.3.0-rc.6'
+          lumqenix-community --doctor
+          sudo dpkg -r lumqenix-community
+          test ! -e /usr/bin/lumqenix-community
+          (cd /tmp && sha256sum lumqenix-community_0.3.0~rc6-1_all.deb > lumqenix-community_0.3.0~rc6-1_all.deb.sha256)
+          (cd /tmp && sha256sum -c lumqenix-community_0.3.0~rc6-1_all.deb.sha256)
       - name: Generate and verify source ZIP checksum
         run: |
           cd /tmp
-          sha256sum lumqenix-community-v0.3.0-rc.5-source.zip > lumqenix-community-v0.3.0-rc.5-source.zip.sha256
-          sha256sum -c lumqenix-community-v0.3.0-rc.5-source.zip.sha256
-          unzip -t lumqenix-community-v0.3.0-rc.5-source.zip
+          sha256sum lumqenix-community-v0.3.0-rc.6-source.zip > lumqenix-community-v0.3.0-rc.6-source.zip.sha256
+          sha256sum -c lumqenix-community-v0.3.0-rc.6-source.zip.sha256
+          unzip -t lumqenix-community-v0.3.0-rc.6-source.zip
       - name: Upload beta regression results
         if: always()
         uses: actions/upload-artifact@v4
@@ -132,10 +155,12 @@ jobs:
       - name: Upload source preview ZIP (not a certified release)
         uses: actions/upload-artifact@v4
         with:
-          name: lumqenix-community-v0.3.0-rc.5-linux-source
+          name: lumqenix-community-v0.3.0-rc.6-linux-source
           path: |
-            /tmp/lumqenix-community-v0.3.0-rc.5-source.zip
-            /tmp/lumqenix-community-v0.3.0-rc.5-source.zip.sha256
-            /tmp/lumqenix-community-v0.3.0-rc.5-linux-installer.run
-            /tmp/lumqenix-community-v0.3.0-rc.5-linux-installer.run.sha256
+            /tmp/lumqenix-community-v0.3.0-rc.6-source.zip
+            /tmp/lumqenix-community-v0.3.0-rc.6-source.zip.sha256
+            /tmp/lumqenix-community-v0.3.0-rc.6-linux-installer.run
+            /tmp/lumqenix-community-v0.3.0-rc.6-linux-installer.run.sha256
+            /tmp/lumqenix-community_0.3.0~rc6-1_all.deb
+            /tmp/lumqenix-community_0.3.0~rc6-1_all.deb.sha256
           if-no-files-found: error
