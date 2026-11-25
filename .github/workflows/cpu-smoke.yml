@@ -1,8 +1,16 @@
 name: CPU smoke tests
+# OWNER CI USAGE RESTRICTION (2026-11-25): never run automatically.
 on:
   workflow_dispatch:
+    inputs:
+      owner_approved:
+        description: 'Owner explicitly approved GitHub Actions usage'
+        type: boolean
+        required: true
+        default: false
 jobs:
   test:
+    if: inputs.owner_approved == true
     runs-on: ubuntu-latest
     timeout-minutes: 12
     defaults:

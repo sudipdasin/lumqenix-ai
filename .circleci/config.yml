@@ -1,8 +1,9 @@
+# OWNER RESTRICTION: all CircleCI execution flags default to false.
 version: 2.1
 parameters:
   auto_main_checks:
     type: boolean
-    default: true
+    default: false
   run_manual_checks:
     type: boolean
     default: false
