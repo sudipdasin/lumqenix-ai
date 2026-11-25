@@ -1,11 +1,16 @@
 name: Community source boundary
+# OWNER CI USAGE RESTRICTION (2026-11-25): NEVER trigger automatically.
 on:
-  push:
-    branches: [main, 'development/**', 'preview/**']
-  pull_request:
   workflow_dispatch:
+    inputs:
+      owner_approved:
+        description: 'I explicitly approve GitHub Actions credits for this run'
+        type: boolean
+        required: true
+        default: false
 jobs:
   edition-boundary:
+    if: inputs.owner_approved == true
     runs-on: ubuntu-latest
     permissions:
       contents: read

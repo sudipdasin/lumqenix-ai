@@ -1,4 +1,9 @@
 version: 2.1
+# OWNER RESTRICTION: jobs disabled by default; do not set true without explicit approval.
+parameters:
+  owner_ci_approved:
+    type: boolean
+    default: false
 jobs:
   linux-preview:
     docker:
@@ -50,5 +55,6 @@ jobs:
             PY
 workflows:
   preview-validation:
+    when: << pipeline.parameters.owner_ci_approved >>
     jobs:
       - linux-preview

@@ -1,0 +1,9 @@
+# Lumqenix AI — owner CI-usage policy (2026-11-25)
+
+**HIGHEST-PRIORITY OWNER DIRECTIVE.** GitHub Actions and CircleCI are usage-restricted. Do not start, dispatch, rerun, trigger, depend upon, or consume credits on either service unless the owner explicitly approves that service for the specific run. This policy overrides older release and validation instructions requiring either CI provider.
+
+All active Community and private Pro workflow triggers must remain manual-only, with owner approval disabled by default. CircleCI execution parameters must remain false by default. Do not restore push, pull-request, schedule, or release-event triggers. Historic release branches may contain older workflows; never push to them without first neutralizing their automatic triggers, or use supported skip-CI commit markers and independently confirm they are honored. Do not change archived release tags.
+
+Continue development through direct repository file/commit APIs, local Linux build/pytest/compile/shell validation, offline Debian package inspection and install/remove smoke tests, static code audits, source archiving and SHA-256 verification. Treat connected infrastructure as optional, not a substitute for real evidence. **Never claim local tests, release upload, model quality, memory performance or an executable publication unless actually observed.** GitHub Releases and direct GitHub repository actions are allowed; *GitHub Actions workflow execution is not*.
+
+Official publication can be performed directly only when the available connected tools support the action and evidence gates have been independently met. If release-upload capability is unavailable, retain tested artifacts or code for later direct publishing rather than triggering restricted CI. Preserve Community/Pro source isolation and do not publish proprietary files.

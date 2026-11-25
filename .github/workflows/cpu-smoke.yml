@@ -1,17 +1,21 @@
 name: CPU smoke tests
+# OWNER CI USAGE RESTRICTION (2026-11-25): NEVER trigger automatically.
 on:
-  push:
-    branches: [main, 'development/**', 'preview/**']
-  pull_request:
   workflow_dispatch:
     inputs:
+      owner_approved:
+        description: 'I explicitly approve GitHub Actions credits for this run'
+        type: boolean
+        required: true
+        default: false
       publish_prerelease:
-        description: 'Publish verified RC4 prerelease only after all gates pass'
+        description: 'Publish prerelease after all gates pass (requires owner approval)'
         type: boolean
         required: true
         default: false
 jobs:
   test:
+    if: inputs.owner_approved == true
     strategy:
       fail-fast: false
       matrix:
@@ -211,6 +215,7 @@ jobs:
           if-no-files-found: warn
 
   frontend:
+    if: inputs.owner_approved == true
     name: Frontend syntax and static checks
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -227,6 +232,7 @@ jobs:
           node --check /tmp/lumqenix-frontend.js
 
   video-integration:
+    if: inputs.owner_approved == true
     name: Real FFmpeg integration
     # Pin the LTS runner: Ubuntu 26 apt mirrors stalled while downloading codecs.
     runs-on: ubuntu-24.04
@@ -269,6 +275,7 @@ jobs:
           if-no-files-found: error
 
   cpu-benchmark:
+    if: inputs.owner_approved == true
     name: CPU image API benchmark
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -314,6 +321,7 @@ jobs:
           if-no-files-found: error
 
   release-evidence:
+    if: inputs.owner_approved == true
     name: Cross-job real-model evidence gate
     needs: [test, frontend, video-integration, cpu-benchmark]
     runs-on: ubuntu-latest
@@ -352,7 +360,7 @@ jobs:
 
   history-audit:
     name: Full reachable-history publication screen
-    if: github.event_name == 'push' && github.ref == 'refs/heads/preview/v0.3.0-rc.6-beta'
+    if: inputs.owner_approved == true
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -378,7 +386,7 @@ jobs:
 
   publish-verified-prerelease:
     name: Publish verified Linux installer and source prerelease (never stable)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/preview/v0.3.0-rc.6-beta'
+    if: inputs.owner_approved == true && inputs.publish_prerelease == true && github.ref == 'refs/heads/preview/v0.3.0-rc.6-beta'
     needs: [test, frontend, video-integration, cpu-benchmark, release-evidence, history-audit]
     runs-on: ubuntu-latest
     timeout-minutes: 12
