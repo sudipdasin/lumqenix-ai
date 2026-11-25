@@ -165,3 +165,16 @@ Missing real weights are explicitly skipped in tests. CI runs Python 3.10/3.12 w
 ## Remaining release gates
 
 Physical 4 GB laptop validation, representative user-portrait A/B approval, and a compatible pretrained ONNX model evaluation remain open. Windows, GPU execution, long-duration video quality, hostile traffic, and multi-user deployment are unverified. The process lock does not bound multipart upload parsing or total host/browser memory. This application is intended for local single-user use; a public service needs a separate deployment and resource-isolation design. No final release is published.
+
+## Local verification without hosted CI (owner directive 2026-11-25)
+
+GitHub Actions and CircleCI are **usage-restricted and disabled by default** until the owner explicitly authorizes a run. For this Community development branch, verify changes locally using existing dependencies—no hosted CI, no implicit pip installation and no root access:
+
+```bash
+bash scripts/verify-local.sh quick    # shell/Python/frontend syntax and source checks
+bash scripts/verify-local.sh tests    # quick checks plus local backend pytest
+bash scripts/verify-local.sh package  # quick checks plus .deb build/inspection
+bash scripts/verify-local.sh all      # perform all local checks
+```
+
+The package check requires `git` and `dpkg-deb` and inspects an archive generated from the committed `HEAD`. It does **not** install packages system-wide or publish a GitHub Release. The test command uses an already-installed interpreter/environment and fails if required dependencies are unavailable. Local checks are not a substitute for independent VM, real-model or 4 GiB physical hardware testing. See [owner CI policy](docs/OWNER_CI_USAGE_POLICY.md).
