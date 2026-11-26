@@ -131,7 +131,12 @@ def build(output_dir):
                     shutil.copyfileobj(source, dest)
                     dest.flush()
                     os.fsync(dest.fileno())
+                temporary.chmod((stage / filename).stat().st_mode & 0o777)
                 temporary.replace(target)
+                if hashlib.sha256(target.read_bytes()).digest() != hashlib.sha256(
+                    (stage / filename).read_bytes()
+                ).digest():
+                    raise RuntimeError("Copied bundle asset checksum mismatch: " + filename)
             finally:
                 temporary.unlink(missing_ok=True)
         return output_dir, commit, name
