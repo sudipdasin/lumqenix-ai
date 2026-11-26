@@ -86,7 +86,7 @@ def enhance_image(file: UploadFile = File(...), preset: str = Form("auto"), scal
     try:
         data = read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
-            if image.width * image.height * scale * scale > LITE_MAX_PIXELS: raise HTTPException(413, "Lite mode output limit: 12 million pixels. Use a smaller image or lower scale.")
+            if image.width * image.height * scale * scale > LITE_MAX_PIXELS: raise HTTPException(413, ("Public preview output limit: 2.5 million pixels. Use a smaller image or lower scale." if PUBLIC_PREVIEW else "Lite mode output limit: 12 million pixels. Use a smaller image or lower scale."))
             if not PROCESSING_LOCK.acquire(blocking=False): raise HTTPException(429, "Another job is processing; try again shortly")
             try:
                 result, _ = enhance(image, preset, scale)
