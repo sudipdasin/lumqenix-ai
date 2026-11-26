@@ -6,6 +6,7 @@ First launch installs Python wheels into a per-user virtualenv; it never runs
 pip as root or during dpkg's installation/removal transactions.
 """
 import argparse
+import hashlib
 from pathlib import Path, PurePosixPath
 import shutil
 import stat
@@ -14,6 +15,15 @@ import tempfile
 import zipfile
 
 MAX_UNCOMPRESSED = 64 * 1024 * 1024
+MAX_ARCHIVE_MEMBERS = 5000
+# Public installers must not contain proprietary/private runtime or credentials.
+FORBIDDEN_PREFIXES = (
+    "pro_backend/", "pro_models/", "licensing/", "private/",
+    "proprietary/", "premium/", "commercial/", "secrets/", "licenses/keys/",
+    "models/proprietary/", "backend/models/proprietary/",
+    "frontend/pro/", "frontend/premium/", "backend/app/pro/",
+    "backend/app/premium/",
+)
 REQUIRED = {
     "LICENSE",
     "backend/app/main.py",
@@ -28,15 +38,21 @@ REQUIRED = {
 def validate_zip(source, expected_version):
     with zipfile.ZipFile(source) as archive:
         names = set()
+        folded_names = set()
         total = 0
         for entry in archive.infolist():
             name = entry.filename
             parts = PurePosixPath(name).parts
             if not name or name.startswith("/") or name.startswith("~") or ".." in parts or "\\" in name:
                 raise ValueError("Unsafe archive path: " + name)
-            if name in names:
-                raise ValueError("Duplicate ZIP member: " + name)
+            if any(name.casefold().startswith(prefix) for prefix in FORBIDDEN_PREFIXES):
+                raise ValueError("Proprietary path forbidden in Community package: " + name)
+            if name in names or name.casefold() in folded_names:
+                raise ValueError("Duplicate or case-conflicting ZIP member: " + name)
             names.add(name)
+            folded_names.add(name.casefold())
+            if len(names) > MAX_ARCHIVE_MEMBERS:
+                raise ValueError("Too many entries in Community source archive")
             mode = entry.external_attr >> 16
             if stat.S_ISLNK(mode) or (stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR)):
                 raise ValueError("Unsupported ZIP member type: " + name)
@@ -111,6 +127,10 @@ def build(source_zip, output, version):
         doc = root / "usr/share/doc/lumqenix-community"
         doc.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(app / "LICENSE", doc / "copyright")
+        (doc / "source-archive.sha256").write_text(
+            hashlib.sha256(source_zip.read_bytes()).hexdigest() + "\\n",
+            encoding="ascii",
+        )
         # Sanitize permissions because source ZIP metadata can vary by platform.
         for path in root.rglob("*"):
             if path.is_file():
