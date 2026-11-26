@@ -4,14 +4,23 @@ import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 PRESETS = {"auto", "natural", "vivid", "restore", "cinematic", "portrait"}
+MAX_ANALYSIS_EDGE = 1024
 
 def inspect(image: Image.Image) -> dict:
     oriented = ImageOps.exif_transpose(image)
+    width, height = oriented.size
+    # Blur/brightness hints do not require full-resolution float64 Laplacian.
+    # Keep their working set near 1 megapixel on CPU/4 GiB laptops.
+    if width > MAX_ANALYSIS_EDGE or height > MAX_ANALYSIS_EDGE:
+        oriented.thumbnail((MAX_ANALYSIS_EDGE, MAX_ANALYSIS_EDGE),
+                           resample=Image.Resampling.BILINEAR)
     rgb = np.asarray(oriented.convert("RGB"))
     gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
     sharpness = float(cv2.Laplacian(gray, cv2.CV_64F).var())
     brightness = float(gray.mean())
-    return {"width": oriented.width, "height": oriented.height,
+    return {"width": width, "height": height,
+            "analysis_sample_width": oriented.width,
+            "analysis_sample_height": oriented.height,
             "brightness": round(brightness, 1), "sharpness_score": round(sharpness, 1),
             "low_light": brightness < 85, "possibly_blurry": sharpness < 90}
 
