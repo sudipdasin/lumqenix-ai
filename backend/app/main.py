@@ -61,7 +61,7 @@ def read_limited(file: UploadFile):
         raise HTTPException(503, "Uploaded file could not be read") from exc
     if not isinstance(content, bytes):
         raise HTTPException(503, "Uploaded file could not be read")
-    if len(content) > MAX_UPLOAD: raise HTTPException(413, "File exceeds 50 MB")
+    if len(content) > MAX_UPLOAD: raise HTTPException(413, f"File exceeds {MAX_UPLOAD // (1024 * 1024)} MiB")
     return content
 
 @app.post("/api/analyze")
