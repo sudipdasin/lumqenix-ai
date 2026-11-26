@@ -27,7 +27,12 @@ def inspect(image: Image.Image) -> dict:
 def enhance(image: Image.Image, preset: str = "auto", scale: int = 2):
     if preset not in PRESETS: raise ValueError("Unknown preset")
     if scale not in (1, 2, 4): raise ValueError("Scale must be 1, 2, or 4")
-    image = ImageOps.exif_transpose(image).convert("RGB")
+    oriented = ImageOps.exif_transpose(image)
+    # Preserve graphic overlays, PNG transparency and palette tRNS across
+    # every classic preset. RGB processing must never discard the alpha plane.
+    has_alpha = "A" in oriented.getbands() or "transparency" in oriented.info
+    alpha = oriented.convert("RGBA").getchannel("A") if has_alpha else None
+    image = oriented.convert("RGB")
     stats = inspect(image)
     if preset in ("auto", "restore"):
         image = ImageOps.autocontrast(image, cutoff=1)
@@ -50,4 +55,8 @@ def enhance(image: Image.Image, preset: str = "auto", scale: int = 2):
         image = ImageEnhance.Color(image).enhance(1.12)
     if scale > 1:
         image = image.resize((image.width * scale, image.height * scale), Image.Resampling.LANCZOS)
+        if alpha is not None:
+            alpha = alpha.resize(image.size, Image.Resampling.LANCZOS)
+    if alpha is not None:
+        image.putalpha(alpha)
     return image, stats
