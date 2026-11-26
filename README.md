@@ -21,6 +21,15 @@ No GitHub Actions or CircleCI execution. See
 [Live preview notes](docs/LIVE_PREVIEW.md). This does not certify neural
 quality, video processing or performance on a physical 4 GiB machine.
 
+### Latest verified live development milestone
+
+The preview currently includes transparency-preserving classic enhancement, browser
+request protection, a comparison slider and cancellation of client-side requests.
+Its independently built staging image passed **82 Python tests (1 skipped)** on
+2026-11-26. This is not a full 4 GiB hardware certification nor a real neural-model
+quality benchmark. The **Cancel** control aborts the browser's request but a server
+job already in progress might still run to completion.
+
 ## Build local release files without hosted CI
 
 To develop and package Community releases without GitHub Actions or CircleCI,
