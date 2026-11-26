@@ -5,7 +5,8 @@
 - **Image metadata:** use EXIF-correct display orientation when reporting image analysis dimensions, consistent with the enhancement engine.
 - **Community Debian packaging:** reject proprietary/private paths, case-insensitive ZIP member collisions and archives with excessive entries; record the source archive SHA-256 inside the Debian package.
 - **Debian launcher:** prevent running user dependency installation as root, protecting the rootless installation contract.
-- **Verification:** 33 targeted offline checks on the changed logic passed. The complete repository suite and real model/video benchmark regressions have **not** been rerun in this environment.
+- **Local release bundles:** add `scripts/build_offline_release.py` to fail closed on dirty checkouts, failed local validation, private code, overwrites and checksum mismatches. Generates a source ZIP, self-extracting `.run`, Debian `.deb`, SHA-256 manifest and provenance JSON without using hosted CI.
+- **Verification:** 42 isolated offline reproductions of the changed logic and release-builder guards passed. The complete repository suite, full builder against the current checkout, and real model/video benchmark regressions have **not** been rerun in this environment.
 - **CI restriction:** GitHub Actions and CircleCI remain manual-only/disabled by default; no hosted runs are authorized. These unreleased changes do not modify the previously published RC6 tag.
 
 
