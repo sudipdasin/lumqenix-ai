@@ -6,11 +6,12 @@ from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 PRESETS = {"auto", "natural", "vivid", "restore", "cinematic", "portrait"}
 
 def inspect(image: Image.Image) -> dict:
-    rgb = np.asarray(image.convert("RGB"))
+    oriented = ImageOps.exif_transpose(image)
+    rgb = np.asarray(oriented.convert("RGB"))
     gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
     sharpness = float(cv2.Laplacian(gray, cv2.CV_64F).var())
     brightness = float(gray.mean())
-    return {"width": image.width, "height": image.height,
+    return {"width": oriented.width, "height": oriented.height,
             "brightness": round(brightness, 1), "sharpness_score": round(sharpness, 1),
             "low_light": brightness < 85, "possibly_blurry": sharpness < 90}
 
