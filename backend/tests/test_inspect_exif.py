@@ -45,9 +45,8 @@ def test_analyze_endpoint_reports_display_orientation():
     from app.main import app
 
     with oriented_jpeg(6) as image:
-        content = image.fp
-        image.seek(0)
-        encoded = content.read()
+        # Use original JPEG bytes, not the decoder's current file offset.
+        encoded = image.fp.getvalue()
     response = TestClient(app).post(
         "/api/analyze",
         files={"file": ("oriented.jpg", encoded, "image/jpeg")},
