@@ -2,6 +2,25 @@
 
 Local image and video enhancement for CPU use. Preview candidate build: **0.3.0-rc.6 (beta preview)**. This is an **experimental prerelease candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
 
+## Live restricted Community preview
+
+**Live site:** https://lumqenix-community-preview-production.up.railway.app/
+
+The hosted Studio Lite beta serves the same-origin web interface and image API.
+It is intended for small, non-sensitive images only: an 8 MiB upload limit,
+2.5 million output pixels, one CPU processing job at a time and a global
+request-rate cap. Public video processing is disabled; optional neural model
+weights are not preinstalled. You can click **Try sample image**, then
+**Enhance & download**, to verify a generated synthetic PNG without uploading
+your own media. Media processing occurs on the hosted server, **not locally**.
+
+Verified on 2026-11-26: independent Railway package build (60 targeted
+Python tests passed, 1 skipped) and a live browser end-to-end synthetic-image
+smoke (128x96 to 256x192 PNG, download triggered; 10/10 checks passed).
+No GitHub Actions or CircleCI execution. See
+[Live preview notes](docs/LIVE_PREVIEW.md). This does not certify neural
+quality, video processing or performance on a physical 4 GiB machine.
+
 ## Build local release files without hosted CI
 
 To develop and package Community releases without GitHub Actions or CircleCI,
