@@ -2,6 +2,21 @@
 
 Local image and video enhancement for CPU use. Preview candidate build: **0.3.0-rc.6 (beta preview)**. This is an **experimental prerelease candidate**, not a production-certified release. The main branch remains unchanged. CI and real-model quality gates must be reviewed before production use. See [CHANGELOG.md](CHANGELOG.md) and [validation evidence](benchmarks/VALIDATION.md).
 
+## Build local release files without hosted CI
+
+To develop and package Community releases without GitHub Actions or CircleCI,
+use a **clean, complete Git checkout** with existing Python dependencies:
+
+```bash
+python3 scripts/build_offline_release.py --output-dir dist
+```
+
+The command runs local regression, public-source and history audits, then builds
+and inspects the source ZIP, Linux `.run`, Debian `.deb`, SHA-256 checksums,
+and a local evidence manifest. It refuses to overwrite existing assets.
+See [offline release instructions](docs/OFFLINE_RELEASE_BUNDLES.md).
+**These local artifacts are not automatically published or production-certified.**
+
 ## Ubuntu / Debian package (RC6)
 
 The release includes a native `lumqenix-community_0.3.0~rc6-1_all.deb` package
