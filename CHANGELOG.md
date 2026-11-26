@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Post-RC6 offline hardening (2026-11-26)
+- **Video preflight:** validate FFprobe dimensions as exact positive ASCII decimal integers bounded to 16,384 pixels per axis; reject booleans, lossy floating-point coercion, malformed metadata and excessive axes before running FFmpeg.
+- **Image metadata:** use EXIF-correct display orientation when reporting image analysis dimensions, consistent with the enhancement engine.
+- **Community Debian packaging:** reject proprietary/private paths, case-insensitive ZIP member collisions and archives with excessive entries; record the source archive SHA-256 inside the Debian package.
+- **Debian launcher:** prevent running user dependency installation as root, protecting the rootless installation contract.
+- **Verification:** 33 targeted offline checks on the changed logic passed. The complete repository suite and real model/video benchmark regressions have **not** been rerun in this environment.
+- **CI restriction:** GitHub Actions and CircleCI remain manual-only/disabled by default; no hosted runs are authorized. These unreleased changes do not modify the previously published RC6 tag.
+
+
 ## v0.3.0-rc.6 — Native Ubuntu/Debian package preview (2026-11-23)
 - Build and attach `lumqenix-community_0.3.0~rc6-1_all.deb` and its SHA-256 checksum directly on the prerelease after the existing real-model, CPU, video, evidence, source-boundary, and packaging gates pass.
 - Add a desktop menu entry and `lumqenix-community` command. System package installation and removal use dpkg-owned files, with no network-capable root maintainer scripts.
