@@ -2,7 +2,7 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "python -m pip install --no-cache-dir -r requirements.txt"
+    "buildCommand": "python -m pip install --no-cache-dir -r requirements.txt pytest httpx && cd backend && python -m pytest -q tests/test_smoke.py tests/test_preview_limits.py tests/test_preview_server.py tests/test_analysis_memory_budget.py tests/test_inspect_exif.py tests/test_video_dimension_preflight.py"
   },
   "deploy": {
     "startCommand": "LUMQENIX_PUBLIC_PREVIEW=1 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=2 python -m uvicorn app.preview_server:app --app-dir backend --host 0.0.0.0 --port ${PORT:-8080} --workers 1",
