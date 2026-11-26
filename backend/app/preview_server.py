@@ -41,7 +41,17 @@ async def public_demo_request_guard(request: Request, call_next):
             return JSONResponse({"detail": "Unsupported preview write operation"}, status_code=405)
         # No trust in client-supplied forwarding headers. Protect global compute
         # capacity rather than using easily spoofed per-IP rate limits.
+        # Cross-site HTML forms can send requests despite response CORS rules.
+        # No cookies are used; reject foreign browser origins to conserve CPU.
+        origin = request.headers.get("origin")
+        if origin:
+            from urllib.parse import urlsplit
+            parsed = urlsplit(origin)
+            if parsed.scheme not in ("https", "http") or parsed.netloc != request.headers.get("host"):
+                return JSONResponse({"detail": "Cross-site processing is disabled"}, status_code=403)
         raw = request.headers.get("content-length")
+        if raw is None:
+            return JSONResponse({"detail": "Content-Length required for preview uploads"}, status_code=411)
         if raw is not None:
             if not raw.isdecimal() or len(raw) > 12 or int(raw) > 9 * 1024 * 1024:
                 return JSONResponse({"detail": "Preview upload limit: 8 MiB"}, status_code=413)
@@ -50,11 +60,20 @@ async def public_demo_request_guard(request: Request, call_next):
             while _RECENT_POSTS and now - _RECENT_POSTS[0] > RATE_WINDOW_SECONDS:
                 _RECENT_POSTS.popleft()
             if len(_RECENT_POSTS) >= MAX_POSTS_PER_MINUTE:
-                return JSONResponse({"detail": "Public demo is busy; try again in a minute"}, status_code=429)
+                return JSONResponse({"detail": "Public demo is busy; try again in a minute"}, status_code=429, headers={"Retry-After": "60"})
             _RECENT_POSTS.append(now)
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; img-src 'self' blob: data:; "
+        "connect-src 'self'; script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; object-src 'none'; "
+        "base-uri 'none'; frame-ancestors 'none'"
+    )
     if request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
     return response
