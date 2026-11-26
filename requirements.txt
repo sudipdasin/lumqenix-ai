@@ -1,0 +1,2 @@
+# Railpack/Nixpacks root dependency manifest. Keep single source in backend.
+-r backend/requirements.txt
