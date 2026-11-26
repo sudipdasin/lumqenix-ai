@@ -19,7 +19,7 @@ from .fsrcnn import upscale as fsrcnn_upscale, model_path as fsrcnn_model_path, 
 from .espcn import upscale as espcn_upscale, available as espcn_available
 from .version import VERSION
 from .edition import community_manifest
-from .video_limits import validate_video_workload
+from .video_limits import validate_video_workload, validate_video_dimensions
 
 app = FastAPI(title="Lumqenix API", version=VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"], allow_methods=["*"], allow_headers=["*"])
@@ -234,7 +234,7 @@ def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scal
                     raise HTTPException(422, "Could not read video stream")
                 metadata = json.loads(probe.stdout)
                 stream = metadata["streams"][0]
-                width, height = int(stream["width"]), int(stream["height"])
+                width, height = validate_video_dimensions(stream)
                 raw_duration = metadata.get("format", {}).get("duration")
                 if raw_duration in (None, "N/A"):
                     raw_duration = stream.get("duration")
