@@ -1,5 +1,6 @@
 """Debian source-package build and safety regressions (no network or root needed)."""
 import importlib.util
+import os
 import hashlib
 from pathlib import Path
 import shutil
@@ -124,3 +125,13 @@ def test_public_package_rejects_excessive_member_count(source_zip, tmp_path, mon
         archive.writestr("extra-file", "bloat")
     with pytest.raises(ValueError, match="Too many entries"):
         builder.build(source_zip, tmp_path / "blocked.deb", "v0.3.0-rc.6")
+
+
+def test_debian_runtime_refuses_privileged_dependency_installation():
+    if not hasattr(os, "geteuid") or os.geteuid() != 0:
+        pytest.skip("Root safety guard is tested when run with UID 0")
+    script = ROOT / "scripts/run-deb.sh"
+    result = subprocess.run(["bash", str(script), "--install-deps"],
+                            capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "Refusing privileged launch" in result.stderr
