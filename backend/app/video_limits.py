@@ -11,6 +11,32 @@ MAX_ESTIMATED_OUTPUT_SAMPLES = 450_000_000
 MAX_ESTIMATED_FRAMES = 1800
 MAX_SUPPORTED_FPS = 240
 
+MAX_VIDEO_AXIS = 16384
+
+
+def validate_video_dimensions(stream: dict) -> tuple[int, int]:
+    """Parse untrusted ffprobe dimensions without lossy coercion or booleans.
+
+    Reject JSON floating-point dimensions (int(64.5) would incorrectly
+    truncate them) and extremely large/unusual numeric values before FFmpeg.
+    """
+    if not isinstance(stream, dict):
+        raise ValueError("Invalid video stream metadata")
+    dimensions = []
+    for key in ("width", "height"):
+        value = stream.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, str)):
+            raise ValueError("Invalid video dimensions")
+        raw = str(value)
+        if not raw.isascii() or not raw.isdecimal() or len(raw) > 10:
+            raise ValueError("Invalid video dimensions")
+        number = int(raw)
+        if number <= 0 or number > MAX_VIDEO_AXIS:
+            raise ValueError("Unsupported video dimensions")
+        dimensions.append(number)
+    return dimensions[0], dimensions[1]
+
+
 
 def _parse_rate(value, *, clamp_nominal=False):
     if value is None or value == "" or value == "N/A" or value == "0/0":
