@@ -13,6 +13,12 @@ case "${1:-}" in
     exit 0 ;;
 esac
 
+# Installing Python packages as root would defeat the rootless package design.
+if (( EUID == 0 )); then
+  echo "Refusing privileged launch. Run lumqenix-community without sudo." >&2
+  exit 1
+fi
+
 command -v python3 >/dev/null || { echo "Python 3.10+ required" >&2; exit 1; }
 python3 - <<'PY'
 import sys
