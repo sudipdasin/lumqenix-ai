@@ -4,16 +4,24 @@ Use this entrypoint only on a cloud host. The local app remains unchanged.
 Upload restrictions are also enforced by main.read_limited and pixel preflight.
 """
 from collections import deque
-import os
 from pathlib import Path
 import threading
 import time
 
-from fastapi import Request
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from .main import app
+from . import main as community
+
+# Do not attach public rate limiting to the local app's shared FastAPI instance:
+# the regular desktop API and its regression suite must remain unaffected.
+app = FastAPI(title="Lumqenix Community Public Preview", version=community.VERSION,
+              docs_url=None, redoc_url=None, openapi_url=None)
+app.router.routes.extend(
+    route for route in community.app.router.routes
+    if getattr(route, "path", "").startswith("/api/")
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 FRONTEND = ROOT / "frontend"
