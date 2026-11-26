@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Live Community web preview (2026-11-26)
+- Merge restricted public Railway web preview using same-origin FastAPI/Studio Lite and health checks, with explicit off-device processing warnings.
+- Add 8 MiB upload cap, 2.5MP cloud output budget, global request limits, and cloud video disabled by default while keeping the desktop edition's limits unchanged.
+- Reduce image analysis working memory to a 1024px sample while preserving original EXIF-aware dimensions and small-image behavior.
+- Add opt-in synthetic sample PNG and accessible API status to test image enhancement without personal data.
+- Independent Railway verification: 60 Python regressions passed, 1 skipped; browser-tested 128x96 synthetic input to 256x192 Natural CPU output, 10/10 interactions, PNG download and 200 HTTP response. No GitHub Actions or CircleCI.
+- This is a live experimental beta, not a certified neural/video-cloud service, a major stable release, or a claim of quality superiority or physical 4 GiB machine verification.
+
 ## Unreleased — Post-RC6 offline hardening (2026-11-26)
 - **Video preflight:** validate FFprobe dimensions as exact positive ASCII decimal integers bounded to 16,384 pixels per axis; reject booleans, lossy floating-point coercion, malformed metadata and excessive axes before running FFmpeg.
 - **Image metadata:** use EXIF-correct display orientation when reporting image analysis dimensions, consistent with the enhancement engine.
