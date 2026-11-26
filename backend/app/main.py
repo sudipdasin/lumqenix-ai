@@ -20,14 +20,18 @@ from .espcn import upscale as espcn_upscale, available as espcn_available
 from .version import VERSION
 from .edition import community_manifest
 from .video_limits import validate_video_workload, validate_video_dimensions
+from .preview_limits import settings_for_environment
 
 app = FastAPI(title="Lumqenix API", version=VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"], allow_methods=["*"], allow_headers=["*"])
-MAX_UPLOAD = 50 * 1024 * 1024
-MAX_VIDEO_OUTPUT = 100 * 1024 * 1024
-MAX_VIDEO_DURATION = 60
-MAX_PIXELS = 32_000_000
-LITE_MAX_PIXELS = 12_000_000
+_LIMITS = settings_for_environment(os.environ)
+PUBLIC_PREVIEW = _LIMITS.public_preview
+MAX_UPLOAD = _LIMITS.max_upload
+MAX_VIDEO_OUTPUT = _LIMITS.max_video_output
+MAX_VIDEO_DURATION = _LIMITS.max_video_duration
+MAX_PIXELS = _LIMITS.max_image_pixels
+LITE_MAX_PIXELS = _LIMITS.lite_max_output_pixels
+VIDEO_ENABLED = _LIMITS.video_enabled
 PROCESSING_LOCK = threading.Lock()
 Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
@@ -39,7 +43,7 @@ def status():
         onnx_ready = False
     return {"status":"ok", "edition": "community", "edition_api_contract": 1, "version": VERSION, "hardware":detect_hardware(), "ai_model_configured":onnx_ready,
             "fsrcnn_available":fsrcnn_available(), "espcn_available":espcn_available(),
-            "ffmpeg_available":bool(shutil.which("ffmpeg") and shutil.which("ffprobe")), "presets":sorted(PRESETS), "lite_mode": True, "lite_max_output_pixels":LITE_MAX_PIXELS}
+            "ffmpeg_available":bool(VIDEO_ENABLED and shutil.which("ffmpeg") and shutil.which("ffprobe")), "video_processing_enabled":VIDEO_ENABLED, "public_preview":PUBLIC_PREVIEW, "max_upload_bytes":MAX_UPLOAD, "presets":sorted(PRESETS), "lite_mode": True, "lite_max_output_pixels":LITE_MAX_PIXELS}
 
 @app.get("/api/edition")
 def edition():
@@ -209,6 +213,7 @@ def enhance_espcn(file: UploadFile = File(...)):
 @app.post("/api/enhance/video")
 def enhance_video(file: UploadFile = File(...), preset: str = Form("auto"), scale: int = Form(2)):
     if preset not in PRESETS or scale not in (1,2,4): raise HTTPException(400, "Invalid preset or scale")
+    if not VIDEO_ENABLED: raise HTTPException(503, "Video processing disabled on the restricted public preview")
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"): raise HTTPException(503, "FFmpeg and ffprobe required")
     data = read_limited(file)
     if not data:
