@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Live fidelity, preview safety and Studio controls (2026-11-26)
+
+- **Pixel fidelity:** classic CPU enhancement preserves RGBA and indexed PNG transparency through all presets and scale factors; alpha edges are antialiased with Lanczos rather than overwritten.
+- **Online preview safety:** block cross-site browser processing requests, require declared request length, add restrictive browser policy headers, retry hints and correct per-environment upload/output error messages.
+- **Studio:** implement accessible interactive Before/After wipe, AbortController request cancellation, client-side 8 MiB preflight and honest disabled states for unconfigured neural engines.
+- **Validation:** independent Railway build on staging commit `da52b022` passed 82 Python cases, 1 skipped; initial alpha antialias test assumptions were corrected after 80 passes and 2 failures. Live service reports healthy with no active warnings.
+- **Limits:** full new browser interaction verification was unavailable due exhausted browser-test credits; cancel aborts the browser request but does not guarantee cancellation of CPU work already running on the server. Neural models and public video processing remain unavailable.
+- GitHub Actions and CircleCI were **not run**. All changes remain on the RC6 development branch; previously published releases are not rewritten.
+
 ## Unreleased — Live Community web preview (2026-11-26)
 - Merge restricted public Railway web preview using same-origin FastAPI/Studio Lite and health checks, with explicit off-device processing warnings.
 - Add 8 MiB upload cap, 2.5MP cloud output budget, global request limits, and cloud video disabled by default while keeping the desktop edition's limits unchanged.
