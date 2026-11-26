@@ -61,7 +61,7 @@ def read_limited(file: UploadFile):
         raise HTTPException(503, "Uploaded file could not be read") from exc
     if not isinstance(content, bytes):
         raise HTTPException(503, "Uploaded file could not be read")
-    if len(content) > MAX_UPLOAD: raise HTTPException(413, "File exceeds 50 MB")
+    if len(content) > MAX_UPLOAD: raise HTTPException(413, f"File exceeds {MAX_UPLOAD // (1024 * 1024)} MiB")
     return content
 
 @app.post("/api/analyze")
@@ -86,7 +86,7 @@ def enhance_image(file: UploadFile = File(...), preset: str = Form("auto"), scal
     try:
         data = read_limited(file)
         with Image.open(io.BytesIO(data)) as image:
-            if image.width * image.height * scale * scale > LITE_MAX_PIXELS: raise HTTPException(413, "Lite mode output limit: 12 million pixels. Use a smaller image or lower scale.")
+            if image.width * image.height * scale * scale > LITE_MAX_PIXELS: raise HTTPException(413, ("Public preview output limit: 2.5 million pixels. Use a smaller image or lower scale." if PUBLIC_PREVIEW else "Lite mode output limit: 12 million pixels. Use a smaller image or lower scale."))
             if not PROCESSING_LOCK.acquire(blocking=False): raise HTTPException(429, "Another job is processing; try again shortly")
             try:
                 result, _ = enhance(image, preset, scale)
