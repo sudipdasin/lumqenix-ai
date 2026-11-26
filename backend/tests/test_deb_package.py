@@ -1,5 +1,7 @@
 """Debian source-package build and safety regressions (no network or root needed)."""
 import importlib.util
+import os
+import hashlib
 from pathlib import Path
 import shutil
 import stat
@@ -51,6 +53,8 @@ def test_build_deb_has_valid_control_and_expected_paths(source_zip, tmp_path):
     assert (unpack / "usr/share/applications/lumqenix-community.desktop").is_file()
     assert (unpack / "opt/lumqenix-community/backend/requirements.txt").is_file()
     assert (unpack / "usr/share/doc/lumqenix-community/copyright").is_file()
+    provenance = unpack / "usr/share/doc/lumqenix-community/source-archive.sha256"
+    assert provenance.read_text().strip() == hashlib.sha256(source_zip.read_bytes()).hexdigest()
     result = subprocess.run(["bash", str(binary), "--version"], capture_output=True, text=True)
     assert result.returncode == 0 and "v0.3.0-rc.6" in result.stdout
     assert subprocess.run(["bash", "-n", str(binary)]).returncode == 0
@@ -91,3 +95,43 @@ def test_bad_version_fails_before_writing(source_zip, tmp_path):
     with pytest.raises(ValueError, match="Unsupported"):
         builder.build(source_zip, tmp_path / "bad.deb", "v1.0.0")
     assert not (tmp_path / "bad.deb").exists()
+
+
+@pytest.mark.parametrize("private_path", [
+    "pro_backend/private_module.py",
+    "private/config.json",
+    "secrets/keys.txt",
+    "Premium/paid_code.py",
+    "backend/models/proprietary/weights.pb",
+])
+def test_public_package_rejects_private_source_paths(source_zip, tmp_path, private_path):
+    with zipfile.ZipFile(source_zip, "a") as archive:
+        archive.writestr(private_path, "private data")
+    with pytest.raises(ValueError, match="Proprietary path forbidden"):
+        builder.build(source_zip, tmp_path / "blocked.deb", "v0.3.0-rc.6")
+    assert not (tmp_path / "blocked.deb").exists()
+
+
+def test_public_package_rejects_case_conflicting_names(source_zip, tmp_path):
+    with zipfile.ZipFile(source_zip, "a") as archive:
+        archive.writestr("license", "conflicting on case-insensitive filesystems")
+    with pytest.raises(ValueError, match="case-conflicting"):
+        builder.build(source_zip, tmp_path / "blocked.deb", "v0.3.0-rc.6")
+
+
+def test_public_package_rejects_excessive_member_count(source_zip, tmp_path, monkeypatch):
+    monkeypatch.setattr(builder, "MAX_ARCHIVE_MEMBERS", len(builder.REQUIRED))
+    with zipfile.ZipFile(source_zip, "a") as archive:
+        archive.writestr("extra-file", "bloat")
+    with pytest.raises(ValueError, match="Too many entries"):
+        builder.build(source_zip, tmp_path / "blocked.deb", "v0.3.0-rc.6")
+
+
+def test_debian_runtime_refuses_privileged_dependency_installation():
+    if not hasattr(os, "geteuid") or os.geteuid() != 0:
+        pytest.skip("Root safety guard is tested when run with UID 0")
+    script = ROOT / "scripts/run-deb.sh"
+    result = subprocess.run(["bash", str(script), "--install-deps"],
+                            capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "Refusing privileged launch" in result.stderr

@@ -15,6 +15,11 @@ sudo apt install ./lumqenix-community_0.3.0~rc6-1_all.deb
 lumqenix-community
 ```
 
+The launcher refuses privileged execution: do not use `sudo lumqenix-community`.
+The `.deb` builder also records the exact source ZIP SHA-256 in
+`/usr/share/doc/lumqenix-community/source-archive.sha256` and refuses
+proprietary paths in Community package archives.
+
 You can also open **Lumqenix Community** from the desktop application menu.
 The package installs a system launcher and application sources in
 `/opt/lumqenix-community`. On first launch, Python dependencies are installed
