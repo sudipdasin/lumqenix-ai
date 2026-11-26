@@ -128,7 +128,7 @@ def build(source_zip, output, version):
         doc.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(app / "LICENSE", doc / "copyright")
         (doc / "source-archive.sha256").write_text(
-            hashlib.sha256(source_zip.read_bytes()).hexdigest() + "\\n",
+            hashlib.sha256(source_zip.read_bytes()).hexdigest() + "\n",
             encoding="ascii",
         )
         # Sanitize permissions because source ZIP metadata can vary by platform.
