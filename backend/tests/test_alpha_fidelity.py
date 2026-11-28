@@ -45,6 +45,33 @@ def test_transparency_scales_with_image(scale):
     assert 200 <= result.getpixel((5 * scale, 4 * scale))[3] <= 255
 
 
+@pytest.mark.parametrize("scale", [2, 4])
+def test_rgba_lanczos_upscale_does_not_introduce_dark_transparent_edge_halos(scale):
+    # Hidden RGB behind fully transparent pixels is black. Resizing RGB and
+    # alpha separately turns that black into a visible dark halo at boundaries.
+    source = Image.new("RGBA", (10, 8), (0, 0, 0, 0))
+    for x in range(3, 7):
+        for y in range(2, 6):
+            source.putpixel((x, y), (255, 88, 32, 255))
+    output, _ = enhance(source, "natural", scale)
+
+    assert output.mode == "RGBA"
+    assert output.size == (10 * scale, 8 * scale)
+    expected_alpha = source.getchannel("A").resize(
+        output.size, Image.Resampling.LANCZOS
+    )
+    assert output.getchannel("A").tobytes() == expected_alpha.tobytes()
+    edge_colors = [
+        output.getpixel((x, y))
+        for y in range(output.height)
+        for x in range(output.width)
+        if 32 <= output.getpixel((x, y))[3] <= 224
+    ]
+    assert edge_colors, "Expected semitransparent Lanczos edge pixels"
+    assert min(pixel[0] for pixel in edge_colors) >= 220
+    assert source.getpixel((0, 0)) == (0, 0, 0, 0)
+
+
 def test_palette_png_transparency_preserved():
     image = Image.new("P", (12, 10), 0)
     image.putpalette([0, 0, 0, 240, 80, 50] + [0] * (256 * 3 - 6))
