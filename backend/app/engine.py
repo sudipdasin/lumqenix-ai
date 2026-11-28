@@ -53,10 +53,11 @@ def enhance(image: Image.Image, preset: str = "auto", scale: int = 2):
     elif preset == "cinematic":
         image = ImageEnhance.Contrast(image).enhance(1.20)
         image = ImageEnhance.Color(image).enhance(1.12)
+    if alpha is not None:
+        # Resize associated RGB+alpha together: Pillow uses premultiplied-alpha
+        # filtering for RGBA, avoiding dark fringes from hidden transparent RGB.
+        # At scale 1 the original alpha remains byte-for-byte unchanged.
+        image.putalpha(alpha)
     if scale > 1:
         image = image.resize((image.width * scale, image.height * scale), Image.Resampling.LANCZOS)
-        if alpha is not None:
-            alpha = alpha.resize(image.size, Image.Resampling.LANCZOS)
-    if alpha is not None:
-        image.putalpha(alpha)
     return image, stats
