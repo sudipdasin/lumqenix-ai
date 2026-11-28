@@ -31,6 +31,31 @@ _RECENT_POSTS = deque()
 _RATE_LOCK = threading.Lock()
 
 
+def _origin_matches_host(origin: str, host: str) -> bool:
+    """Reject malformed browser Origin values without trusting proxy headers.
+
+    TLS may terminate upstream, so enforce same-host syntax here rather than
+    comparing the request scheme from an untrusted forwarding header.
+    """
+    from urllib.parse import urlsplit
+
+    if not origin or any(ord(char) < 33 or ord(char) > 126 for char in origin):
+        return False
+    try:
+        parsed = urlsplit(origin)
+        _ = parsed.port  # Invalid ports and malformed IPv6 must fail closed.
+    except ValueError:
+        return False
+    return (
+        parsed.scheme in ("http", "https")
+        and parsed.hostname is not None
+        and parsed.netloc.lower() == host.lower()
+        and not parsed.path
+        and not parsed.query
+        and not parsed.fragment
+    )
+
+
 @app.middleware("http")
 async def public_demo_request_guard(request: Request, call_next):
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
@@ -44,11 +69,8 @@ async def public_demo_request_guard(request: Request, call_next):
         # Cross-site HTML forms can send requests despite response CORS rules.
         # No cookies are used; reject foreign browser origins to conserve CPU.
         origin = request.headers.get("origin")
-        if origin:
-            from urllib.parse import urlsplit
-            parsed = urlsplit(origin)
-            if parsed.scheme not in ("https", "http") or parsed.netloc != request.headers.get("host"):
-                return JSONResponse({"detail": "Cross-site processing is disabled"}, status_code=403)
+        if origin and not _origin_matches_host(origin, request.headers.get("host", "")):
+            return JSONResponse({"detail": "Cross-site processing is disabled"}, status_code=403)
         raw = request.headers.get("content-length")
         if raw is None:
             return JSONResponse({"detail": "Content-Length required for preview uploads"}, status_code=411)
