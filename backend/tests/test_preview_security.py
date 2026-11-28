@@ -1,6 +1,7 @@
 """Live preview security/limit contracts without hosted CI."""
 import io
 
+import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
@@ -23,6 +24,38 @@ def test_live_preview_rejects_cross_origin_form_requests():
     )
     assert response.status_code == 403
     assert "Cross-site" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("origin", [
+    "http://[",
+    "http://testserver:99999",
+    "http://testserver/extra",
+    "http://testserver?bad=1",
+    "http://testserver#fragment",
+    "http://testserver.evil.example",
+    "ftp://testserver",
+    "null",
+])
+def test_preview_rejects_invalid_origin_without_server_error(origin):
+    preview_server._RECENT_POSTS.clear()
+    try:
+        reply = TestClient(preview_server.app).post(
+            "/api/analyze", headers={"Origin": origin},
+            files={"file": ("bad.png", b"not an image", "image/png")},
+        )
+        assert reply.status_code == 403, (origin, reply.text)
+        assert reply.json()["detail"] == "Cross-site processing is disabled"
+    finally:
+        preview_server._RECENT_POSTS.clear()
+
+
+def test_origin_parser_rejects_invalid_ascii_controls_and_accepts_case_insensitive_host():
+    matches = preview_server._origin_matches_host
+    assert not matches("http://testserver\r", "testserver")
+    assert not matches("http://testserver\n", "testserver")
+    assert not matches("http://testserver ", "testserver")
+    assert matches("HTTPS://TESTSERVER".lower(), "testserver")
+    assert matches("http://testserver", "testserver")
 
 
 def test_live_preview_allows_same_origin_form_requests():
