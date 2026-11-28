@@ -54,7 +54,7 @@ def test_origin_parser_rejects_invalid_ascii_controls_and_accepts_case_insensiti
     assert not matches("http://testserver\r", "testserver")
     assert not matches("http://testserver\n", "testserver")
     assert not matches("http://testserver ", "testserver")
-    assert matches("HTTPS://TESTSERVER".lower(), "testserver")
+    assert matches("https://TESTSERVER", "testserver")
     assert matches("http://testserver", "testserver")
 
 
